@@ -19,6 +19,7 @@ from .customer import CustomerAgent
 from .directory import DirectoryAgent
 from .fleetmanager import FleetManagerAgent
 from .simfleet_agent import SimfleetAgent
+from .geolocated_agent import GeoLocatedAgent
 from .station import StationAgent
 from .transport import TransportAgent
 from .utils import load_class, status_to_str, avg, request_path as async_request_path
@@ -175,6 +176,24 @@ class SimulatorAgent(Agent):
             )
             agent = self.create_simfleet_agent(name, password)
             agent.start()
+
+        for geolocated_agent in self.config["geolocated_agents"]:
+            name = geolocated_agent["name"]
+            position = geolocated_agent["position"]
+            password = (
+                geolocated_agent["password"]
+                if "password" in geolocated_agent
+                else faker_factory.password()
+            )
+            agent = self.create_geolocated_agent(name, password)
+            agent.set_position(position)
+            icon = geolocated_agent.get("icon")
+            self.set_icon(agent, icon, default="transport")
+            
+            try:
+                future = self.submit([].append(agent.start()))
+            except Exception as e:
+                logger.exception("EXCEPTION creating Geolocated agents batch {}".format(e))
 
         all_coroutines = []
         try:
@@ -1303,6 +1322,31 @@ class SimulatorAgent(Agent):
     ):
         jid = f"{name}@{self.jid.domain}"
         agent = SimfleetAgent(jid, password)
+        logger.debug("Creating Simfleet base Agent {}".format(jid))
+        agent.set_id(name)
+        agent.set_directory(self.get_directory().jid)
+
+        if strategy:
+            agent.strategy = load_class(strategy)
+        else:
+            agent.strategy = self.fleetmanager_strategy
+
+        if self.simulation_running:
+            agent.run_strategy()
+
+        self.add_manager(agent)
+
+        agent.is_launched = True
+
+        self.submit(self.async_start_agent(agent))
+
+        return agent
+
+    def create_geolocated_agent(
+        self, name, password, strategy=None
+    ):
+        jid = f"{name}@{self.jid.domain}"
+        agent = GeoLocatedAgent(jid, password)
         logger.debug("Creating Simfleet base Agent {}".format(jid))
         agent.set_id(name)
         agent.set_directory(self.get_directory().jid)
