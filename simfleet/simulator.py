@@ -18,6 +18,7 @@ from tabulate import tabulate
 from .customer import CustomerAgent
 from .directory import DirectoryAgent
 from .fleetmanager import FleetManagerAgent
+from .simfleet_agent import SimfleetAgent
 from .station import StationAgent
 from .transport import TransportAgent
 from .utils import load_class, status_to_str, avg, request_path as async_request_path
@@ -164,6 +165,16 @@ class SimulatorAgent(Agent):
 
         while len(self.manager_agents) < self.config.num_managers:
             time.sleep(0.1)
+
+        for base_agent in self.config["base_agents"]:
+            name = base_agent["name"]
+            password = (
+                base_agent["password"]
+                if "password" in base_agent
+                else faker_factory.password()
+            )
+            agent = self.create_simfleet_agent(name, password)
+            agent.start()
 
         all_coroutines = []
         try:
@@ -1270,6 +1281,31 @@ class SimulatorAgent(Agent):
         agent.set_directory(self.get_directory().jid)
         logger.debug("Assigning type {} to fleet manager {}".format(fleet_type, name))
         agent.set_fleet_type(fleet_type)
+
+        if strategy:
+            agent.strategy = load_class(strategy)
+        else:
+            agent.strategy = self.fleetmanager_strategy
+
+        if self.simulation_running:
+            agent.run_strategy()
+
+        self.add_manager(agent)
+
+        agent.is_launched = True
+
+        self.submit(self.async_start_agent(agent))
+
+        return agent
+
+    def create_simfleet_agent(
+        self, name, password, strategy=None
+    ):
+        jid = f"{name}@{self.jid.domain}"
+        agent = SimfleetAgent(jid, password)
+        logger.debug("Creating Simfleet base Agent {}".format(jid))
+        agent.set_id(name)
+        agent.set_directory(self.get_directory().jid)
 
         if strategy:
             agent.strategy = load_class(strategy)

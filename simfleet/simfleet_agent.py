@@ -17,20 +17,9 @@ from .protocol import (
     REFUSE_PERFORMATIVE,
     QUERY_PROTOCOL,
 )
-from .utils import (
-    CUSTOMER_WAITING,
-    CUSTOMER_IN_DEST,
-    TRANSPORT_MOVING_TO_CUSTOMER,
-    CUSTOMER_IN_TRANSPORT,
-    TRANSPORT_IN_CUSTOMER_PLACE,
-    CUSTOMER_LOCATION,
-    StrategyBehaviour,
-    request_path,
-    status_to_str,
-)
 
 
-class CustomerAgent(Agent):
+class SimfleetAgent(Agent):
     def __init__(self, agentjid, password):
         super().__init__(agentjid, password)
         self.agent_id = None
@@ -49,9 +38,7 @@ class CustomerAgent(Agent):
         fsm.add_state(name=STATE_ONE, state=StateOne(), initial=True)
         fsm.add_state(name=STATE_TWO, state=StateTwo())
         fsm.add_transition(source=STATE_ONE, dest=STATE_TWO)
-        
         self.add_behaviour(fsm)
-
 
     def is_ready(self):
         return not self.is_launched or (self.is_launched and self.ready)
