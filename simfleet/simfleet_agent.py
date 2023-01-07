@@ -112,9 +112,10 @@ class SimfleetAgent(Agent):
 class GeneralFSMBehaviour(FSMBehaviour):
     async def on_start(self):
         print(f"Generic agent starting at initial state {self.current_state}")
+        pass
 
     async def on_end(self):
-        print(f"FSM finished at state {self.current_state}")
+        # print(f"FSM finished at state {self.current_state}")
         await self.agent.stop()
 
 STATE_ONE = "STATE_ONE"
@@ -122,10 +123,11 @@ STATE_TWO = "STATE_TWO"
 
 class StateOne(State):
     async def run(self):
-        print("I'm at state one ")
+        # print("I'm at state one ")
         self.set_next_state(STATE_TWO)
 
 
 class StateTwo(State):
     async def run(self):
-        print("I'm at state two (final state)")
+        # print("I'm at state two (final state)")
+        pass

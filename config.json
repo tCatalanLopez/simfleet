@@ -25,7 +25,7 @@
     "geolocated_agents": [
         {
             "password": "secret",
-            "name": "simfleetAgent1",
+            "name": "Geo1",
             "icon": "drone",
             "position": [40.446163241978304, -3.7105464935302734]
         }

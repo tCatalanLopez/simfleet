@@ -147,6 +147,7 @@ class SimulatorAgent(Agent):
         """
         Load the information from the preloaded scenario through the SimfleetConfig class
         """
+        all_coroutines = []
         logger.info("Loading scenario...")
         for manager in self.config["fleets"]:
             name = manager["name"]
@@ -175,27 +176,18 @@ class SimulatorAgent(Agent):
                 else faker_factory.password()
             )
             agent = self.create_simfleet_agent(name, password)
+            self.add_simfleet_agent(agent)
             agent.start()
-
-        for geolocated_agent in self.config["geolocated_agents"]:
-            name = geolocated_agent["name"]
-            position = geolocated_agent["position"]
-            password = (
-                geolocated_agent["password"]
-                if "password" in geolocated_agent
-                else faker_factory.password()
-            )
-            agent = self.create_geolocated_agent(name, password)
-            agent.set_position(position)
-            icon = geolocated_agent.get("icon")
-            self.set_icon(agent, icon, default="transport")
             
-            try:
-                future = self.submit([].append(agent.start()))
-            except Exception as e:
-                logger.exception("EXCEPTION creating Geolocated agents batch {}".format(e))
+        try:
+            future = self.submit(
+                self.async_create_agents_batch_geolocated(self.config["geolocated_agents"])
+            )
+            all_coroutines += future.result()
+            
+        except Exception as e:
+            logger.exception("EXCEPTION creating Geolocated agents batch {}".format(e))
 
-        all_coroutines = []
         try:
             future = self.submit(
                 self.async_create_agents_batch_transport(self.config["transports"])
@@ -222,7 +214,7 @@ class SimulatorAgent(Agent):
         self.submit(self.gather_batch(all_coroutines))
 
     async def gather_batch(self, all_coroutines):
-        agents_batch = 20
+        agents_batch = 1
         number = max(len(all_coroutines), 0)
         iterations = [agents_batch] * (number // agents_batch)
         if number % agents_batch:
@@ -419,6 +411,8 @@ class SimulatorAgent(Agent):
                             + list(self.agent.transport_agents.values())
                             + list(self.agent.customer_agents.values())
                             + list(self.agent.station_agents.values())
+                            + list(self.agent.simfleet_agents.values())
+                            + list(self.agent.geolocated_agents.values())
                         )
                         while not all([agent.is_ready() for agent in all_agents]):
                             logger.debug("Waiting for all agents to be ready")
@@ -442,6 +436,16 @@ class SimulatorAgent(Agent):
                             station.run_strategy()
                             logger.debug(
                                 f"Running strategy {self.agent.directory_strategy} to station {station.name}"
+                            )
+                        for simfleet_agent in self.agent.simfleet_agents.values():
+                            simfleet_agent.run_strategy()
+                            logger.debug(
+                                f"Running strategy {self.agent.directory_strategy} to simfleet_agent {simfleet_agent.name}"
+                            )
+                        for geolocated_agent in self.agent.geolocated_agents.values():
+                            geolocated_agent.run_strategy()
+                            logger.debug(
+                                f"Running strategy {self.agent.directory_strategy} to geolocated_agent {geolocated_agent.name}"
                             )
 
                     self.agent.simulation_running = True
@@ -643,6 +647,26 @@ class SimulatorAgent(Agent):
             dict: a dict of ``StationAgent`` with the name in the key
         """
         return self.get("station_agents")
+
+    @property
+    def simfleet_agents(self):
+        """
+        Gets the dict of registered simfleet_agents
+
+        Returns:
+            dict: a dict of ``SimFleetAgent`` with the name in the key
+        """
+        return self.get("simfleet_agents")
+
+    @property
+    def geolocated_agents(self):
+        """
+        Gets the dict of registered geolocated agents
+
+        Returns:
+            dict: a dict of ``GeolocatedAgent`` with the name in the key
+        """
+        return self.get("geolocated_agents")
 
     async def index_controller(self, request):
         """
@@ -972,6 +996,8 @@ class SimulatorAgent(Agent):
         self.set("transport_agents", {})
         self.set("customer_agents", {})
         self.set("station_agents", {})
+        self.set("simfleet_agents", {})
+        self.set("geolocated_agents", {})
         self.simulation_time = None
         self.simulation_init_time = None
 
@@ -1320,6 +1346,14 @@ class SimulatorAgent(Agent):
     def create_simfleet_agent(
         self, name, password, strategy=None
     ):
+        """
+        Create a base simfleet agent.
+
+        Args:
+            name (str): name of the agent
+            password (str): password of the agent
+            strategy (class, optional): strategy class of the agent
+        """
         jid = f"{name}@{self.jid.domain}"
         agent = SimfleetAgent(jid, password)
         logger.debug("Creating Simfleet base Agent {}".format(jid))
@@ -1334,8 +1368,6 @@ class SimulatorAgent(Agent):
         if self.simulation_running:
             agent.run_strategy()
 
-        self.add_manager(agent)
-
         agent.is_launched = True
 
         self.submit(self.async_start_agent(agent))
@@ -1343,13 +1375,23 @@ class SimulatorAgent(Agent):
         return agent
 
     def create_geolocated_agent(
-        self, name, password, strategy=None
+        self, name, password, position, strategy=None
     ):
+        """
+        Create a geolocated agent.
+
+        Args:
+            name (str): name of the agent
+            password (str): password of the agent
+            position (list): initial coordinates of the agent
+            strategy (class, optional): strategy class of the agent
+        """
         jid = f"{name}@{self.jid.domain}"
         agent = GeoLocatedAgent(jid, password)
         logger.debug("Creating Simfleet base Agent {}".format(jid))
         agent.set_id(name)
         agent.set_directory(self.get_directory().jid)
+        agent.set_position(position)
 
         if strategy:
             agent.strategy = load_class(strategy)
@@ -1359,13 +1401,37 @@ class SimulatorAgent(Agent):
         if self.simulation_running:
             agent.run_strategy()
 
-        self.add_manager(agent)
-
         agent.is_launched = True
-
-        self.submit(self.async_start_agent(agent))
+        self.add_geolocated_agent(agent)
 
         return agent
+
+    async def async_create_agents_batch_geolocated(self, agents: list) -> List:
+        coros = []
+        for geolocated_agent in agents:
+            name = geolocated_agent["name"]
+            logger.debug("geolocated agents creation batch = {}".format(name))
+            password = (
+                geolocated_agent["password"]
+                if "password" in geolocated_agent
+                else faker_factory.password()
+            )
+
+            position = geolocated_agent["position"]
+            strategy = geolocated_agent.get("strategy")
+            icon = geolocated_agent.get("icon")
+
+            agent = self.create_geolocated_agent(
+                name,
+                password,
+                position=position,
+                strategy=strategy
+            )
+
+            self.set_icon(agent, icon, default="customer")
+
+            coros.append(agent.start())
+        return coros
 
     def create_transport_agent(
         self,
@@ -1544,6 +1610,26 @@ class SimulatorAgent(Agent):
         """
         with self.simulation_mutex:
             self.get("station_agents")[agent.name] = agent
+    
+    def add_simfleet_agent(self, agent):
+        """
+        Adds a new ``SimfleetAgent`` to the store.
+
+        Args:
+            agent (``SimfleetAgent``): the instance of the TransportAgent to be added
+        """
+        with self.simulation_mutex:
+            self.get("simfleet_agents")[agent.name] = agent
+
+    def add_geolocated_agent(self, agent):
+        """
+        Adds a new ``GeolocatedAgent`` to the store.
+
+        Args:
+            agent (``GeolocatedAgent``): the instance of the TransportAgent to be added
+        """
+        with self.simulation_mutex:
+            self.get("geolocated_agents")[agent.name] = agent
 
     def set_default_strategies(
         self,
