@@ -34,11 +34,19 @@ class SimfleetAgent(Agent):
         self.directory_id = None
     
     async def setup(self):
-        fsm = GeneralFSMBehaviour()
-        fsm.add_state(name=STATE_ONE, state=StateOne(), initial=True)
-        fsm.add_state(name=STATE_TWO, state=StateTwo())
-        fsm.add_transition(source=STATE_ONE, dest=STATE_TWO)
-        self.add_behaviour(fsm)
+        try:
+            fsm = GeneralFSMBehaviour()
+            fsm.add_state(name=STATE_ONE, state=StateOne(), initial=True)
+            fsm.add_state(name=STATE_TWO, state=StateTwo())
+            fsm.add_transition(source=STATE_ONE, dest=STATE_TWO)
+            self.add_behaviour(fsm)
+            self.ready = True
+        except Exception as e:
+            logger.error(
+                "EXCEPTION creating RegisterBehaviour in Transport {}: {}".format(
+                    self.agent_id, e
+                )
+            )
 
     def is_ready(self):
         return not self.is_launched or (self.is_launched and self.ready)
@@ -48,11 +56,11 @@ class SimfleetAgent(Agent):
         Runs the strategy for the customer agent.
         """
         if not self.running_strategy:
-            template1 = Template()
-            template1.set_metadata("protocol", REQUEST_PROTOCOL)
-            template2 = Template()
-            template2.set_metadata("protocol", QUERY_PROTOCOL)
-            self.add_behaviour(self.strategy(), template1 | template2)
+            fsm = GeneralFSMBehaviour()
+            fsm.add_state(name=STATE_ONE, state=StateOne(), initial=True)
+            fsm.add_state(name=STATE_TWO, state=StateTwo())
+            fsm.add_transition(source=STATE_ONE, dest=STATE_TWO)
+            self.add_behaviour(fsm)
             self.running_strategy = True
 
     def set_id(self, agent_id):
