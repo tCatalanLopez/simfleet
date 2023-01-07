@@ -177,16 +177,25 @@ class SimulatorAgent(Agent):
             )
             agent = self.create_simfleet_agent(name, password)
             self.add_simfleet_agent(agent)
-            agent.start()
-            
-        try:
-            future = self.submit(
-                self.async_create_agents_batch_geolocated(self.config["geolocated_agents"])
+
+        for geo_agent in self.config["geolocated_agents"]:
+            name = geo_agent["name"]
+            position = geo_agent["position"]
+            password = (
+                geo_agent["password"]
+                if "password" in geo_agent
+                else faker_factory.password()
             )
-            all_coroutines += future.result()
+            agent = self.create_geolocated_agent(name, password, position)
+            self.add_geolocated_agent(agent)
             
-        except Exception as e:
-            logger.exception("EXCEPTION creating Geolocated agents batch {}".format(e))
+        # try:
+        #     future = self.submit(
+        #         self.async_create_agents_batch_geolocated(self.config["geolocated_agents"])
+        #     )
+        #     all_coroutines += future.result()
+        # except Exception as e:
+        #     logger.exception("EXCEPTION creating Geolocated agents batch {}".format(e))
 
         try:
             future = self.submit(
@@ -214,7 +223,7 @@ class SimulatorAgent(Agent):
         self.submit(self.gather_batch(all_coroutines))
 
     async def gather_batch(self, all_coroutines):
-        agents_batch = 1
+        agents_batch = 20
         number = max(len(all_coroutines), 0)
         iterations = [agents_batch] * (number // agents_batch)
         if number % agents_batch:
@@ -1370,6 +1379,8 @@ class SimulatorAgent(Agent):
 
         agent.is_launched = True
 
+        self.add_simfleet_agent(agent)
+        agent.is_launched = True
         self.submit(self.async_start_agent(agent))
 
         return agent
@@ -1401,8 +1412,9 @@ class SimulatorAgent(Agent):
         if self.simulation_running:
             agent.run_strategy()
 
-        agent.is_launched = True
         self.add_geolocated_agent(agent)
+        agent.is_launched = True
+        self.submit(self.async_start_agent(agent))
 
         return agent
 
