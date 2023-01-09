@@ -28,6 +28,12 @@
             "name": "Geo1",
             "icon": "customer",
             "position": [40.446163241978304, -3.7105464935302734]
+        },
+        {
+            "password": "secret",
+            "name": "Geo2",
+            "icon": "customer",
+            "position": [40.446163241978304, -3.7105464935302734]
         }
     ],
     "transports": [

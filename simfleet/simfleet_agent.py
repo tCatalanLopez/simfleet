@@ -28,18 +28,18 @@ class SimfleetAgent(Agent):
         self.port = None
         self.init_time = None
         self.end_time = None
-        self.stopped = False
+        self.stopped = True
         self.ready = False
         self.is_launched = False
         self.directory_id = None
     
     async def setup(self):
         try:
-            fsm = GeneralFSMBehaviour()
-            fsm.add_state(name=STATE_ONE, state=StateOne(), initial=True)
-            fsm.add_state(name=STATE_TWO, state=StateTwo())
-            fsm.add_transition(source=STATE_ONE, dest=STATE_TWO)
-            self.add_behaviour(fsm)
+            # fsm = GeneralFSMBehaviour()
+            # fsm.add_state(name=STATE_ONE, state=StateOne(), initial=True)
+            # fsm.add_state(name=STATE_TWO, state=StateTwo())
+            # fsm.add_transition(source=STATE_ONE, dest=STATE_TWO)
+            # self.add_behaviour(fsm)
             self.ready = True
         except Exception as e:
             logger.error(
@@ -56,11 +56,11 @@ class SimfleetAgent(Agent):
         Runs the strategy for the customer agent.
         """
         if not self.running_strategy:
-            fsm = GeneralFSMBehaviour()
-            fsm.add_state(name=STATE_ONE, state=StateOne(), initial=True)
-            fsm.add_state(name=STATE_TWO, state=StateTwo())
-            fsm.add_transition(source=STATE_ONE, dest=STATE_TWO)
-            self.add_behaviour(fsm)
+            # fsm = GeneralFSMBehaviour()
+            # fsm.add_state(name=STATE_ONE, state=StateOne(), initial=True)
+            # fsm.add_state(name=STATE_TWO, state=StateTwo())
+            # fsm.add_transition(source=STATE_ONE, dest=STATE_TWO)
+            # self.add_behaviour(fsm)
             self.running_strategy = True
 
     def set_id(self, agent_id):
@@ -128,6 +128,7 @@ class GeneralFSMBehaviour(FSMBehaviour):
 
 STATE_ONE = "STATE_ONE"
 STATE_TWO = "STATE_TWO"
+
 
 class StateOne(State):
     async def run(self):

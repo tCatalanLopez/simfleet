@@ -178,24 +178,24 @@ class SimulatorAgent(Agent):
             agent = self.create_simfleet_agent(name, password)
             self.add_simfleet_agent(agent)
 
-        for geo_agent in self.config["geolocated_agents"]:
-            name = geo_agent["name"]
-            position = geo_agent["position"]
-            password = (
-                geo_agent["password"]
-                if "password" in geo_agent
-                else faker_factory.password()
-            )
-            agent = self.create_geolocated_agent(name, password, position)
-            self.add_geolocated_agent(agent)
-            
-        # try:
-        #     future = self.submit(
-        #         self.async_create_agents_batch_geolocated(self.config["geolocated_agents"])
+        # for geo_agent in self.config["geolocated_agents"]:
+        #     name = geo_agent["name"]
+        #     position = geo_agent["position"]
+        #     password = (
+        #         geo_agent["password"]
+        #         if "password" in geo_agent
+        #         else faker_factory.password()
         #     )
-        #     all_coroutines += future.result()
-        # except Exception as e:
-        #     logger.exception("EXCEPTION creating Geolocated agents batch {}".format(e))
+        #     agent = self.create_geolocated_agent(name, password, position)
+        #     self.add_geolocated_agent(agent)
+            
+        try:
+            future = self.submit(
+                self.async_create_agents_batch_geolocated(self.config["geolocated_agents"])
+            )
+            all_coroutines += future.result()
+        except Exception as e:
+            logger.exception("EXCEPTION creating Geolocated agents batch {}".format(e))
 
         try:
             future = self.submit(
@@ -449,12 +449,12 @@ class SimulatorAgent(Agent):
                         for simfleet_agent in self.agent.simfleet_agents.values():
                             simfleet_agent.run_strategy()
                             logger.debug(
-                                f"Running strategy {self.agent.directory_strategy} to simfleet_agent {simfleet_agent.name}"
+                                f"Running strategy of simfleet_agent {simfleet_agent.name}"
                             )
                         for geolocated_agent in self.agent.geolocated_agents.values():
                             geolocated_agent.run_strategy()
                             logger.debug(
-                                f"Running strategy {self.agent.directory_strategy} to geolocated_agent {geolocated_agent.name}"
+                                f"Running strategy of geolocated_agent {geolocated_agent.name}"
                             )
 
                     self.agent.simulation_running = True
@@ -1369,17 +1369,12 @@ class SimulatorAgent(Agent):
         agent.set_id(name)
         agent.set_directory(self.get_directory().jid)
 
-        if strategy:
-            agent.strategy = load_class(strategy)
-        else:
-            agent.strategy = self.fleetmanager_strategy
-
         if self.simulation_running:
             agent.run_strategy()
 
         agent.is_launched = True
 
-        self.add_simfleet_agent(agent)
+        # self.add_simfleet_agent(agent)
         agent.is_launched = True
         self.submit(self.async_start_agent(agent))
 
@@ -1404,11 +1399,6 @@ class SimulatorAgent(Agent):
         agent.set_directory(self.get_directory().jid)
         agent.set_position(position)
 
-        if strategy:
-            agent.strategy = load_class(strategy)
-        else:
-            agent.strategy = self.fleetmanager_strategy
-
         if self.simulation_running:
             agent.run_strategy()
 
@@ -1430,14 +1420,14 @@ class SimulatorAgent(Agent):
             )
 
             position = geolocated_agent["position"]
-            strategy = geolocated_agent.get("strategy")
+            # strategy = geolocated_agent.get("strategy")
             icon = geolocated_agent.get("icon")
 
             agent = self.create_geolocated_agent(
                 name,
                 password,
                 position=position,
-                strategy=strategy
+                strategy=None
             )
 
             self.set_icon(agent, icon, default="customer")

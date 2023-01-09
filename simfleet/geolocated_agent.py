@@ -10,14 +10,7 @@ from spade.template import Template
 from .simfleet_agent import SimfleetAgent
 
 from .helpers import random_position
-from .protocol import (
-    REQUEST_PROTOCOL,
-    TRAVEL_PROTOCOL,
-    REQUEST_PERFORMATIVE,
-    ACCEPT_PERFORMATIVE,
-    REFUSE_PERFORMATIVE,
-    QUERY_PROTOCOL,
-)
+
 
 
 class GeoLocatedAgent(SimfleetAgent):
@@ -28,11 +21,7 @@ class GeoLocatedAgent(SimfleetAgent):
     
     async def setup(self):
         try: 
-            fsm = GeneralFSMBehaviour()
-            fsm.add_state(name=STATE_ONE, state=StateOne(), initial=True)
-            fsm.add_state(name=STATE_TWO, state=StateTwo())
-            fsm.add_transition(source=STATE_ONE, dest=STATE_TWO)
-            self.add_behaviour(fsm)
+            self.add_behaviour(Ciclo())
             self.ready = True
         except Exception as e:
             logger.error(
@@ -50,11 +39,7 @@ class GeoLocatedAgent(SimfleetAgent):
         Runs the strategy for the customer agent.
         """
         if not self.running_strategy:
-            fsm = GeneralFSMBehaviour()
-            fsm.add_state(name=STATE_ONE, state=StateOne(), initial=True)
-            fsm.add_state(name=STATE_TWO, state=StateTwo())
-            fsm.add_transition(source=STATE_ONE, dest=STATE_TWO)
-            self.add_behaviour(fsm)
+            self.setup()
             self.running_strategy = True
 
     def set_id(self, agent_id):
@@ -80,7 +65,7 @@ class GeoLocatedAgent(SimfleetAgent):
         """
         self.directory_id = directory_id
 
-    def set_position(self, coords=None):
+    async def set_position(self, coords=None):
         """
         Sets the position of the transport. If no position is provided it is located in a random position.
 
@@ -128,26 +113,13 @@ class GeoLocatedAgent(SimfleetAgent):
             "id": self.agent_id,
         }
 
-
-class GeneralFSMBehaviour(FSMBehaviour):
+class Ciclo(CyclicBehaviour):
     async def on_start(self):
-        # print(f"Geolocated agent starting at initial state {self.current_state}")
+        logger.info("geolocated agent esta empezando")
+
+    async def run(self):
+        # logger.info("geolocated agent sigue funcionando")
         pass
-
     async def on_end(self):
-        # print(f"FSM finished at state {self.current_state}")
-        await self.agent.stop()
-
-STATE_ONE = "STATE_ONE"
-STATE_TWO = "STATE_TWO"
-
-class StateOne(State):
-    async def run(self):
-        # print("I'm at state one ")
-        self.set_next_state(STATE_TWO)
-
-
-class StateTwo(State):
-    async def run(self):
-        # print("I'm at state two (final state)")
+        logger.info("acabo")
         pass
