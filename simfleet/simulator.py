@@ -16,10 +16,9 @@ from spade.behaviour import TimeoutBehaviour, OneShotBehaviour
 from tabulate import tabulate
 
 from .customer import CustomerAgent
+from .new_customer import NewCustomerAgent
 from .directory import DirectoryAgent
 from .fleetmanager import FleetManagerAgent
-from .simfleet_agent import SimfleetAgent
-from .geolocated_agent import GeoLocatedAgent
 from .station import StationAgent
 from .transport import TransportAgent
 from .utils import load_class, status_to_str, avg, request_path as async_request_path
@@ -168,35 +167,6 @@ class SimulatorAgent(Agent):
         while len(self.manager_agents) < self.config.num_managers:
             time.sleep(0.1)
 
-        for base_agent in self.config["base_agents"]:
-            name = base_agent["name"]
-            password = (
-                base_agent["password"]
-                if "password" in base_agent
-                else faker_factory.password()
-            )
-            agent = self.create_simfleet_agent(name, password)
-            self.add_simfleet_agent(agent)
-
-        # for geo_agent in self.config["geolocated_agents"]:
-        #     name = geo_agent["name"]
-        #     position = geo_agent["position"]
-        #     password = (
-        #         geo_agent["password"]
-        #         if "password" in geo_agent
-        #         else faker_factory.password()
-        #     )
-        #     agent = self.create_geolocated_agent(name, password, position)
-        #     self.add_geolocated_agent(agent)
-            
-        try:
-            future = self.submit(
-                self.async_create_agents_batch_geolocated(self.config["geolocated_agents"])
-            )
-            all_coroutines += future.result()
-        except Exception as e:
-            logger.exception("EXCEPTION creating Geolocated agents batch {}".format(e))
-
         try:
             future = self.submit(
                 self.async_create_agents_batch_transport(self.config["transports"])
@@ -211,6 +181,13 @@ class SimulatorAgent(Agent):
             all_coroutines += future.result()
         except Exception as e:
             logger.exception("EXCEPTION creating Customer agents batch {}".format(e))
+        try:
+            future = self.submit(
+                self.async_create_agents_batch_new_customer(self.config["new_customers"])
+            )
+            all_coroutines += future.result()
+        except Exception as e:
+            logger.exception("EXCEPTION creating NewCustomer agents batch {}".format(e))
         try:
             future = self.submit(
                 self.async_create_agents_batch_station(self.config["stations"])
@@ -330,6 +307,48 @@ class SimulatorAgent(Agent):
             else:
                 coros.append(agent.start())
         return coros
+    
+    async def async_create_agents_batch_new_customer(self, agents: list) -> List:
+        coros = []
+        for customer in agents:
+            name = customer["name"]
+            logger.debug("customer creation batch = {}".format(name))
+            password = (
+                customer["password"]
+                if "password" in customer
+                else faker_factory.password()
+            )
+
+            fleet_type = customer["fleet_type"]
+            position = customer["position"]
+            target = customer["destination"]
+            strategy = customer.get("strategy")
+            icon = customer.get("icon")
+            delay = customer["delay"] if "delay" in customer else None
+
+            delayed = False
+            if delay is not None:
+                delayed = True
+
+            agent = self.create_NEW_customer_agent(
+                name,
+                password,
+                fleet_type,
+                position=position,
+                target=target,
+                strategy=strategy,
+                delayed=delayed,
+            )
+
+            self.set_icon(agent, icon, default="customer")
+
+            if delay is not None:
+                if delay not in self.delayed_launch_agents:
+                    self.delayed_launch_agents[delay] = []
+                self.delayed_launch_agents[delay].append(agent)
+            else:
+                coros.append(agent.start())
+        return coros
 
     async def async_create_agents_batch_station(self, agents: list) -> List:
         coros = []
@@ -420,8 +439,6 @@ class SimulatorAgent(Agent):
                             + list(self.agent.transport_agents.values())
                             + list(self.agent.customer_agents.values())
                             + list(self.agent.station_agents.values())
-                            + list(self.agent.simfleet_agents.values())
-                            + list(self.agent.geolocated_agents.values())
                         )
                         while not all([agent.is_ready() for agent in all_agents]):
                             logger.debug("Waiting for all agents to be ready")
@@ -445,16 +462,6 @@ class SimulatorAgent(Agent):
                             station.run_strategy()
                             logger.debug(
                                 f"Running strategy {self.agent.directory_strategy} to station {station.name}"
-                            )
-                        for simfleet_agent in self.agent.simfleet_agents.values():
-                            simfleet_agent.run_strategy()
-                            logger.debug(
-                                f"Running strategy of simfleet_agent {simfleet_agent.name}"
-                            )
-                        for geolocated_agent in self.agent.geolocated_agents.values():
-                            geolocated_agent.run_strategy()
-                            logger.debug(
-                                f"Running strategy of geolocated_agent {geolocated_agent.name}"
                             )
 
                     self.agent.simulation_running = True
@@ -656,26 +663,6 @@ class SimulatorAgent(Agent):
             dict: a dict of ``StationAgent`` with the name in the key
         """
         return self.get("station_agents")
-
-    @property
-    def simfleet_agents(self):
-        """
-        Gets the dict of registered simfleet_agents
-
-        Returns:
-            dict: a dict of ``SimFleetAgent`` with the name in the key
-        """
-        return self.get("simfleet_agents")
-
-    @property
-    def geolocated_agents(self):
-        """
-        Gets the dict of registered geolocated agents
-
-        Returns:
-            dict: a dict of ``GeolocatedAgent`` with the name in the key
-        """
-        return self.get("geolocated_agents")
 
     async def index_controller(self, request):
         """
@@ -1005,8 +992,6 @@ class SimulatorAgent(Agent):
         self.set("transport_agents", {})
         self.set("customer_agents", {})
         self.set("station_agents", {})
-        self.set("simfleet_agents", {})
-        self.set("geolocated_agents", {})
         self.simulation_time = None
         self.simulation_init_time = None
 
@@ -1352,89 +1337,6 @@ class SimulatorAgent(Agent):
 
         return agent
 
-    def create_simfleet_agent(
-        self, name, password, strategy=None
-    ):
-        """
-        Create a base simfleet agent.
-
-        Args:
-            name (str): name of the agent
-            password (str): password of the agent
-            strategy (class, optional): strategy class of the agent
-        """
-        jid = f"{name}@{self.jid.domain}"
-        agent = SimfleetAgent(jid, password)
-        logger.debug("Creating Simfleet base Agent {}".format(jid))
-        agent.set_id(name)
-        agent.set_directory(self.get_directory().jid)
-
-        if self.simulation_running:
-            agent.run_strategy()
-
-        agent.is_launched = True
-
-        # self.add_simfleet_agent(agent)
-        agent.is_launched = True
-        self.submit(self.async_start_agent(agent))
-
-        return agent
-
-    def create_geolocated_agent(
-        self, name, password, position, strategy=None
-    ):
-        """
-        Create a geolocated agent.
-
-        Args:
-            name (str): name of the agent
-            password (str): password of the agent
-            position (list): initial coordinates of the agent
-            strategy (class, optional): strategy class of the agent
-        """
-        jid = f"{name}@{self.jid.domain}"
-        agent = GeoLocatedAgent(jid, password)
-        logger.debug("Creating Simfleet base Agent {}".format(jid))
-        agent.set_id(name)
-        agent.set_directory(self.get_directory().jid)
-        agent.set_position(position)
-
-        if self.simulation_running:
-            agent.run_strategy()
-
-        self.add_geolocated_agent(agent)
-        agent.is_launched = True
-        self.submit(self.async_start_agent(agent))
-
-        return agent
-
-    async def async_create_agents_batch_geolocated(self, agents: list) -> List:
-        coros = []
-        for geolocated_agent in agents:
-            name = geolocated_agent["name"]
-            logger.debug("geolocated agents creation batch = {}".format(name))
-            password = (
-                geolocated_agent["password"]
-                if "password" in geolocated_agent
-                else faker_factory.password()
-            )
-
-            position = geolocated_agent["position"]
-            # strategy = geolocated_agent.get("strategy")
-            icon = geolocated_agent.get("icon")
-
-            agent = self.create_geolocated_agent(
-                name,
-                password,
-                position=position,
-                strategy=None
-            )
-
-            self.set_icon(agent, icon, default="customer")
-
-            coros.append(agent.start())
-        return coros
-
     def create_transport_agent(
         self,
         name,
@@ -1505,6 +1407,57 @@ class SimulatorAgent(Agent):
         """
         jid = f"{name}@{self.jid.domain}"
         agent = CustomerAgent(jid, password)
+        logger.debug("Creating Customer {}".format(jid))
+        agent.set_id(name)
+        agent.set_directory(self.get_directory().jid)
+        logger.debug("Assigning fleet type {} to customer {}".format(fleet_type, name))
+        agent.set_fleet_type(fleet_type)
+        agent.set_route_host(self.route_host)
+        agent.set_directory(self.get_directory().jid)
+
+        agent.set_position(position)
+
+        agent.set_target_position(target)
+
+        if strategy:
+            agent.strategy = load_class(strategy)
+        else:
+            agent.strategy = self.customer_strategy
+
+        if self.simulation_running:
+            agent.run_strategy()
+
+        self.add_customer(agent)
+
+        if not delayed:
+            agent.is_launched = True  # TODO
+
+        return agent
+
+    def create_NEW_customer_agent(
+        self,
+        name,
+        password,
+        fleet_type,
+        position,
+        strategy=None,
+        target=None,
+        delayed=False,
+    ):
+        """
+        Create a customer agent.
+
+        Args:
+            name (str): name of the agent
+            password (str): password of the agent
+            fleet_type (str): type of he fleet to be or demand
+            position (list): initial coordinates of the agent
+            strategy (class, optional): strategy class of the agent
+            target (list, optional): destination coordinates of the agent
+            delayed (bool, optional): launching of the agent delayed or not
+        """
+        jid = f"{name}@{self.jid.domain}"
+        agent = NewCustomerAgent(jid, password)
         logger.debug("Creating Customer {}".format(jid))
         agent.set_id(name)
         agent.set_directory(self.get_directory().jid)
@@ -1613,26 +1566,6 @@ class SimulatorAgent(Agent):
         with self.simulation_mutex:
             self.get("station_agents")[agent.name] = agent
     
-    def add_simfleet_agent(self, agent):
-        """
-        Adds a new ``SimfleetAgent`` to the store.
-
-        Args:
-            agent (``SimfleetAgent``): the instance of the TransportAgent to be added
-        """
-        with self.simulation_mutex:
-            self.get("simfleet_agents")[agent.name] = agent
-
-    def add_geolocated_agent(self, agent):
-        """
-        Adds a new ``GeolocatedAgent`` to the store.
-
-        Args:
-            agent (``GeolocatedAgent``): the instance of the TransportAgent to be added
-        """
-        with self.simulation_mutex:
-            self.get("geolocated_agents")[agent.name] = agent
-
     def set_default_strategies(
         self,
         fleetmanager_strategy,

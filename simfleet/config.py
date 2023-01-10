@@ -34,6 +34,7 @@ class SimfleetConfig(object):
         self.__config["transports"] = []
         self.__config["customers"] = []
         self.__config["stations"] = []
+        self.__config["new_customers"] = []
 
         if filename:
             self.load_config(filename)
