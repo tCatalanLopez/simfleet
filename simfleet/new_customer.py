@@ -37,7 +37,6 @@ class NewCustomerAgent(GeoLocatedAgent):
         self.fleetmanagers = None
         self.route_host = None
         self.status = CUSTOMER_WAITING
-        self.dest = None
         self.transport_assigned = None
         self.waiting_for_pickup_time = None
         self.pickup_time = None

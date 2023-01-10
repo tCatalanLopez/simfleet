@@ -13,6 +13,7 @@ class GeoLocatedAgent(SimfleetAgent):
     def __init__(self, agentjid, password):
         super().__init__(agentjid, password)
         self.current_pos = None
+        self.dest = None
         self.icon = None
     
     def set_icon(self, icon):
@@ -41,3 +42,19 @@ class GeoLocatedAgent(SimfleetAgent):
             list: the coordinates of the current position of the Agent (lon, lat)
         """
         return self.current_pos
+
+    def set_target_position(self, coords=None):
+        """
+        Sets the target position of the Agent (i.e. its destination).
+        If no position is provided the destination is setted to a random position.
+
+        Args:
+            coords (list): a list coordinates (longitude and latitude)
+        """
+        if coords:
+            self.dest = coords
+        else:
+            self.dest = random_position()
+        logger.debug(
+            "Agent {} target position is {}".format(self.agent_id, self.dest)
+        )
