@@ -20,7 +20,7 @@ class GeoLocatedAgent(SimfleetAgent):
 
     def set_position(self, coords=None):
         """
-        Sets the position of the customer. If no position is provided it is located in a random position.
+        Sets the position of the Agent. If no position is provided it is located in a random position.
 
         Args:
             coords (list): a list coordinates (longitude and latitude)
@@ -30,14 +30,14 @@ class GeoLocatedAgent(SimfleetAgent):
         else:
             self.current_pos = random_position()
         logger.debug(
-            "Customer {} position is {}".format(self.agent_id, self.current_pos)
+            "Agent {} position is {}".format(self.agent_id, self.current_pos)
         )
 
     def get_position(self):
         """
-        Returns the current position of the customer.
+        Returns the current position of the Agent.
 
         Returns:
-            list: the coordinates of the current position of the customer (lon, lat)
+            list: the coordinates of the current position of the Agent (lon, lat)
         """
         return self.current_pos
