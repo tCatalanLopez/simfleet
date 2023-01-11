@@ -251,20 +251,7 @@ class Vehicle(MovableMixin,GeoLocatedAgent):
         })
         return data
 
-    class MovingBehaviour(PeriodicBehaviour):
-            """
-            This is the internal behaviour that manages the movement of the transport.
-            It is triggered when the transport has a new destination and the periodic tick
-            is recomputed at every step to show a fine animation.
-            This moving behaviour includes to update the transport coordinates as it
-            moves along the path at the specified speed.
-            """
-
-            async def run(self):
-                await self.agent.step()
-                self.period = self.agent.animation_speed / ONESECOND_IN_MS
-                if self.agent.is_in_destination():
-                    self.agent.remove_behaviour(self)
+    
 
 class RegistrationBehaviour(CyclicBehaviour):
     async def on_start(self):
