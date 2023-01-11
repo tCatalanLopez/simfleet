@@ -52,10 +52,20 @@ MIN_AUTONOMY = 2
 ONESECOND_IN_MS = 1000
 
 # esto realmente excepto toda la funcionalidad del cliente es vehicle
-class Vehicle(GeoLocatedAgent, MovableMixin):
+class Vehicle(MovableMixin,GeoLocatedAgent):
     def __init__(self, agentjid, password):
         super().__init__(agentjid, password)
+        self.set("path", None)
+        self.set("speed_in_kmh", 3000)
         self.fleetmanager_id = None
+        self.registration = None
+
+        # a movable
+        self.chunked_path = None
+        self.animation_speed = ONESECOND_IN_MS
+        
+        self.distances = []
+        self.durations = []
         
     async def setup(self):
         try:
@@ -106,6 +116,18 @@ class Vehicle(GeoLocatedAgent, MovableMixin):
             )
         )
         self.fleetmanager_id = fleetmanager_id
+
+    def set_registration(self, status, content=None):
+        """
+        Sets the status of registration
+        Args:
+            status (boolean): True if the transport agent has registered or False if not
+            content (dict):
+        """
+        if content is not None:
+            self.icon = content["icon"] if self.icon is None else self.icon
+            self.fleet_type = content["fleet_type"]
+        self.registration = status
 
     async def arrived_to_destination(self):
         """
@@ -260,21 +282,95 @@ class Vehicle(GeoLocatedAgent, MovableMixin):
         })
         return data
 
+    # todo esto va a movable mixing tal cual
+    async def move_to(self, dest):
+        """
+        Moves the transport to a new destination.
+
+        Args:
+            dest (list): the coordinates of the new destination (in lon, lat format)
+
+        Raises:
+             AlreadyInDestination: if the transport is already in the destination coordinates.
+        """
+        if self.get("current_pos") == dest:
+            raise AlreadyInDestination
+        counter = 5
+        path = None
+        distance, duration = 0, 0
+        while counter > 0 and path is None:
+            logger.debug(
+                "Requesting path from {} to {}".format(self.get("current_pos"), dest)
+            )
+            path, distance, duration = await self.request_path(
+                self.get("current_pos"), dest
+            )
+            counter -= 1
+        if path is None:
+            raise PathRequestException("Error requesting route.")
+
+        self.set("path", path)
+        try:
+            self.chunked_path = chunk_path(path, self.get("speed_in_kmh"))
+        except Exception as e:
+            logger.error("Exception chunking path {}: {}".format(path, e))
+            raise PathRequestException
+        self.dest = dest
+        self.distances.append(distance)
+        self.durations.append(duration)
+        behav = self.MovingBehaviour(period=1)
+        self.add_behaviour(behav)
+
+    async def step(self):
+        """
+        Advances one step in the simulation
+        """
+        if self.chunked_path:
+            _next = self.chunked_path.pop(0)
+            distance = distance_in_meters(self.get_position(), _next)
+            self.animation_speed = (
+                distance / kmh_to_ms(self.get("speed_in_kmh")) * ONESECOND_IN_MS
+            )
+            await self.set_position(_next)
+
+
+    async def request_path(self, origin, destination):
+        """
+        Requests a path between two points (origin and destination) using the route server.
+
+        Args:
+            origin (list): the coordinates of the origin of the requested path
+            destination (list): the coordinates of the end of the requested path
+
+        Returns:
+            list, float, float: A list of points that represent the path from origin to destination, the distance and
+            the estimated duration
+
+        Examples:
+            >>> path, distance, duration = await self.request_path(origin=[0,0], destination=[1,1])
+            >>> print(path)
+            [[0,0], [0,1], [1,1]]
+            >>> print(distance)
+            2.0
+            >>> print(duration)
+            3.24
+        """
+        return await request_path(self, origin, destination, self.route_host)
+
     class MovingBehaviour(PeriodicBehaviour):
-        """
-        This is the internal behaviour that manages the movement of the transport.
-        It is triggered when the transport has a new destination and the periodic tick
-        is recomputed at every step to show a fine animation.
-        This moving behaviour includes to update the transport coordinates as it
-        moves along the path at the specified speed.
-        """
+            """
+            This is the internal behaviour that manages the movement of the transport.
+            It is triggered when the transport has a new destination and the periodic tick
+            is recomputed at every step to show a fine animation.
+            This moving behaviour includes to update the transport coordinates as it
+            moves along the path at the specified speed.
+            """
 
-        async def run(self):
-            await self.agent.step()
-            self.period = self.agent.animation_speed / ONESECOND_IN_MS
-            if self.agent.is_in_destination():
-                self.agent.remove_behaviour(self)
-
+            async def run(self):
+                await self.agent.step()
+                self.period = self.agent.animation_speed / ONESECOND_IN_MS
+                if self.agent.is_in_destination():
+                    self.agent.remove_behaviour(self)
 
 class RegistrationBehaviour(CyclicBehaviour):
     async def on_start(self):
@@ -332,7 +428,7 @@ class RegistrationBehaviour(CyclicBehaviour):
             )
 
 
-class TransportStrategyBehaviour(StrategyBehaviour):
+class VehicleStrategyBehaviour(StrategyBehaviour):
     """
     Class from which to inherit to create a transport strategy.
     You must overload the ```run`` coroutine

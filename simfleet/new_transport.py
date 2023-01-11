@@ -6,7 +6,7 @@ from collections import defaultdict
 
 from loguru import logger
 from spade.agent import Agent
-from spade.behaviour import PeriodicBehaviour, CyclicBehaviour
+from spade.behaviour import CyclicBehaviour
 from spade.message import Message
 from spade.template import Template
 
@@ -14,9 +14,7 @@ from simfleet.movable import MovableMixin
 from .vehicle import Vehicle
 
 from .helpers import (
-    random_position,
     distance_in_meters,
-    kmh_to_ms,
     PathRequestException,
     AlreadyInDestination,
 )
@@ -52,11 +50,10 @@ MIN_AUTONOMY = 2
 ONESECOND_IN_MS = 1000
 
 # esto realmente excepto toda la funcionalidad del cliente es vehicle
-class TransportAgent(Vehicle):
+class NewTransportAgent(Vehicle):
     def __init__(self, agentjid, password):
         super().__init__(agentjid, password)
-
-        
+        self.status = TRANSPORT_WAITING
         self.set("current_customer", None)
         self.current_customer_orig = None
         self.current_customer_dest = None
@@ -121,18 +118,6 @@ class TransportAgent(Vehicle):
                     self.agent_id, e
                 )
             )
-
-    def set_registration(self, status, content=None):
-        """
-        Sets the status of registration
-        Args:
-            status (boolean): True if the transport agent has registered or False if not
-            content (dict):
-        """
-        if content is not None:
-            self.icon = content["icon"] if self.icon is None else self.icon
-            self.fleet_type = content["fleet_type"]
-        self.registration = status
 
     def run_strategy(self):
         """
@@ -397,29 +382,6 @@ class TransportAgent(Vehicle):
                 CUSTOMER_LOCATION, {"location": self.get("current_pos")} # todo lo que sea self.get("current_pos") -> self.current_pos (si se cambia)
             )
 
-    # ChargeableMixin
-    def set_km_expense(self, expense=0):
-        self.current_autonomy_km -= expense
-    
-    # ChargeableMixin
-    def set_autonomy(self, autonomy, current_autonomy=None):
-        self.max_autonomy_km = autonomy
-        self.current_autonomy_km = (
-            current_autonomy if current_autonomy is not None else autonomy
-        )
-    
-    # ChargeableMixin
-    def get_autonomy(self):
-        return self.current_autonomy_km
-
-    # ChargeableMixin
-    def calculate_km_expense(self, origin, start, dest=None):
-        fir_distance = distance_in_meters(origin, start)
-        sec_distance = distance_in_meters(start, dest)
-        if dest is None:
-            sec_distance = 0
-        return (fir_distance + sec_distance) // 1000
-
     def to_json(self):
         """
         Serializes the main information of a transport agent to a JSON format.
@@ -458,21 +420,6 @@ class TransportAgent(Vehicle):
             "path": self.get("path"),
         })
         return data
-
-    class MovingBehaviour(PeriodicBehaviour):
-        """
-        This is the internal behaviour that manages the movement of the transport.
-        It is triggered when the transport has a new destination and the periodic tick
-        is recomputed at every step to show a fine animation.
-        This moving behaviour includes to update the transport coordinates as it
-        moves along the path at the specified speed.
-        """
-
-        async def run(self):
-            await self.agent.step()
-            self.period = self.agent.animation_speed / ONESECOND_IN_MS
-            if self.agent.is_in_destination():
-                self.agent.remove_behaviour(self)
 
 
 class RegistrationBehaviour(CyclicBehaviour):
@@ -640,50 +587,6 @@ class TransportStrategyBehaviour(StrategyBehaviour):
             )
             await self.agent.arrived_to_station()
 
-    def has_enough_autonomy(self, customer_orig, customer_dest):
-        autonomy = self.agent.get_autonomy()
-        if autonomy <= MIN_AUTONOMY:
-            logger.warning(
-                "{} has not enough autonomy ({}).".format(self.agent.name, autonomy)
-            )
-            return False
-        travel_km = self.agent.calculate_km_expense(
-            self.get("current_pos"), customer_orig, customer_dest
-        )
-        logger.debug(
-            "Transport {} has autonomy {} when max autonomy is {}"
-            " and needs {} for the trip".format(
-                self.agent.name,
-                self.agent.current_autonomy_km,
-                self.agent.max_autonomy_km,
-                travel_km,
-            )
-        )
-
-        if autonomy - travel_km < MIN_AUTONOMY:
-            logger.warning(
-                "{} has not enough autonomy to do travel ({} for {} km).".format(
-                    self.agent.name, autonomy, travel_km
-                )
-            )
-            return False
-        return True
-
-    def check_and_decrease_autonomy(self, customer_orig, customer_dest):
-        autonomy = self.agent.get_autonomy()
-        travel_km = self.agent.calculate_km_expense(
-            self.get("current_pos"), customer_orig, customer_dest
-        )
-        if autonomy - travel_km < MIN_AUTONOMY:
-            logger.warning(
-                "{} has not enough autonomy to do travel ({} for {} km).".format(
-                    self.agent.name, autonomy, travel_km
-                )
-            )
-            return False
-        self.agent.set_km_expense(travel_km)
-        return True
-
     async def send_get_stations(self, content=None):
 
         if content is None or len(content) == 0:
@@ -744,10 +647,6 @@ class TransportStrategyBehaviour(StrategyBehaviour):
         reply.set_metadata("performative", CANCEL_PERFORMATIVE)
         reply.body = json.dumps(content)
         await self.send(reply)
-
-    async def charge_allowed(self):
-        self.set("in_station_place", None)  # new
-        await self.agent.begin_charging()
 
     async def run(self):
         raise NotImplementedError
