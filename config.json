@@ -59,22 +59,6 @@
             "name": "bike2"
         }
     ],
-    "new_customers": [
-        {
-            "destination": [40.45785423938172,-3.711318969726563],
-            "position": [40.440088345478614,-3.680849075317383],
-            "password": "secret",
-            "name": "TipoNuevo1",
-            "fleet_type": "drone"
-        },
-        {
-            "destination": [40.458572614225545,-3.680419921875],
-            "position": [40.409770982232956,-3.6928653717041016],
-            "password": "secret",
-            "name": "TipoNuevo2",
-            "fleet_type": "drone"
-        }
-    ],
     "customers": [
         {
             "destination": [40.446163241978304,-3.7075424194335938],

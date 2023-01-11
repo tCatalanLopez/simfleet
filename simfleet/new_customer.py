@@ -36,7 +36,7 @@ class NewCustomerAgent(GeoLocatedAgent):
         
         # este se podría pasar a geolocated, realmente todo lo que necesite una flota es un geolocated, y si no hay que reescribirlo todo otra vez
         self.fleetmanagers = None
-
+        self.status = CUSTOMER_WAITING
         self.transport_assigned = None
         self.waiting_for_pickup_time = None
         self.pickup_time = None

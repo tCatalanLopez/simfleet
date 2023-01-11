@@ -13,11 +13,25 @@ class GeoLocatedAgent(SimfleetAgent):
     def __init__(self, agentjid, password):
         super().__init__(agentjid, password)
         self.current_pos = None
+        self.route_host = None
+
+        # por si acaso
+        self.set("current_pos", None)
+
         self.dest = None
         self.icon = None
     
     def set_icon(self, icon):
         self.icon = icon
+
+    def set_route_host(self, route_host):
+        """
+        Sets the route host server address
+        Args:
+            route_host (str): the route host server address
+
+        """
+        self.route_host = route_host
 
     def set_position(self, coords=None):
         """
@@ -33,6 +47,8 @@ class GeoLocatedAgent(SimfleetAgent):
         logger.debug(
             "Agent {} position is {}".format(self.agent_id, self.current_pos)
         )
+    def set_initial_position(self, coords):
+        self.set("current_pos", coords)
 
     def get_position(self):
         """

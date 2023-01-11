@@ -17,6 +17,7 @@ from tabulate import tabulate
 
 from .customer import CustomerAgent
 from .new_customer import NewCustomerAgent
+# from .new_transport import NewTransportAgent
 from .directory import DirectoryAgent
 from .fleetmanager import FleetManagerAgent
 from .station import StationAgent
@@ -183,13 +184,6 @@ class SimulatorAgent(Agent):
             logger.exception("EXCEPTION creating Customer agents batch {}".format(e))
         try:
             future = self.submit(
-                self.async_create_agents_batch_new_customer(self.config["new_customers"])
-            )
-            all_coroutines += future.result()
-        except Exception as e:
-            logger.exception("EXCEPTION creating NewCustomer agents batch {}".format(e))
-        try:
-            future = self.submit(
                 self.async_create_agents_batch_station(self.config["stations"])
             )
             all_coroutines += future.result()
@@ -289,48 +283,6 @@ class SimulatorAgent(Agent):
                 delayed = True
 
             agent = self.create_customer_agent(
-                name,
-                password,
-                fleet_type,
-                position=position,
-                target=target,
-                strategy=strategy,
-                delayed=delayed,
-            )
-
-            self.set_icon(agent, icon, default="customer")
-
-            if delay is not None:
-                if delay not in self.delayed_launch_agents:
-                    self.delayed_launch_agents[delay] = []
-                self.delayed_launch_agents[delay].append(agent)
-            else:
-                coros.append(agent.start())
-        return coros
-    
-    async def async_create_agents_batch_new_customer(self, agents: list) -> List:
-        coros = []
-        for customer in agents:
-            name = customer["name"]
-            logger.debug("customer creation batch = {}".format(name))
-            password = (
-                customer["password"]
-                if "password" in customer
-                else faker_factory.password()
-            )
-
-            fleet_type = customer["fleet_type"]
-            position = customer["position"]
-            target = customer["destination"]
-            strategy = customer.get("strategy")
-            icon = customer.get("icon")
-            delay = customer["delay"] if "delay" in customer else None
-
-            delayed = False
-            if delay is not None:
-                delayed = True
-
-            agent = self.create_NEW_customer_agent(
                 name,
                 password,
                 fleet_type,
@@ -1352,6 +1304,7 @@ class SimulatorAgent(Agent):
     ):
         jid = f"{name}@{self.jid.domain}"
         agent = TransportAgent(jid, password)
+        # agent = NewTransportAgent(jid, password)
         logger.debug("Creating Transport {}".format(jid))
         agent.set_id(name)
         agent.set_directory(self.get_directory().jid)
@@ -1395,58 +1348,6 @@ class SimulatorAgent(Agent):
     ):
         """
         Create a customer agent.
-
-        Args:
-            name (str): name of the agent
-            password (str): password of the agent
-            fleet_type (str): type of he fleet to be or demand
-            position (list): initial coordinates of the agent
-            strategy (class, optional): strategy class of the agent
-            target (list, optional): destination coordinates of the agent
-            delayed (bool, optional): launching of the agent delayed or not
-        """
-        jid = f"{name}@{self.jid.domain}"
-        agent = CustomerAgent(jid, password)
-        logger.debug("Creating Customer {}".format(jid))
-        agent.set_id(name)
-        agent.set_directory(self.get_directory().jid)
-        logger.debug("Assigning fleet type {} to customer {}".format(fleet_type, name))
-        agent.set_fleet_type(fleet_type)
-        agent.set_route_host(self.route_host)
-        agent.set_directory(self.get_directory().jid)
-
-        agent.set_position(position)
-
-        agent.set_target_position(target)
-
-        if strategy:
-            agent.strategy = load_class(strategy)
-        else:
-            agent.strategy = self.customer_strategy
-
-        if self.simulation_running:
-            agent.run_strategy()
-
-        self.add_customer(agent)
-
-        if not delayed:
-            agent.is_launched = True  # TODO
-
-        return agent
-
-    def create_NEW_customer_agent(
-        self,
-        name,
-        password,
-        fleet_type,
-        position,
-        strategy=None,
-        target=None,
-        delayed=False,
-    ):
-        """
-        Create a customer agent.
-
         Args:
             name (str): name of the agent
             password (str): password of the agent
