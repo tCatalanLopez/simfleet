@@ -58,3 +58,17 @@ class GeoLocatedAgent(SimfleetAgent):
         logger.debug(
             "Agent {} target position is {}".format(self.agent_id, self.dest)
         )
+
+    def to_json(self):
+        """
+        Returns a JSON with the relevant data of this type of agent
+        """
+        data = super().to_json()
+        data.update({
+            "position": self.current_pos,
+            "dest": [float("{0:.6f}".format(coord)) for coord in self.dest]
+            if self.dest
+            else None,
+            "icon": self.icon
+        })
+        return data

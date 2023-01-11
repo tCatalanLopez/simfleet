@@ -33,14 +33,15 @@ from .utils import (
 class NewCustomerAgent(GeoLocatedAgent):
     def __init__(self, agentjid, password):
         super().__init__(agentjid, password)
-        self.fleet_type = None
+        
+        # este se podría pasar a geolocated, realmente todo lo que necesite una flota es un geolocated, y si no hay que reescribirlo todo otra vez
         self.fleetmanagers = None
-        self.route_host = None
-        self.status = CUSTOMER_WAITING
+
         self.transport_assigned = None
         self.waiting_for_pickup_time = None
         self.pickup_time = None
 
+        # type_service y fleet type no entiendo muy bien en que se diferencian
         self.type_service = "taxi"
 
     async def setup(self):
@@ -76,15 +77,6 @@ class NewCustomerAgent(GeoLocatedAgent):
             self.add_behaviour(self.strategy(), template1 | template2)
             self.running_strategy = True
 
-    def set_fleet_type(self, fleet_type):
-        """
-        Sets the type of fleet to be used.
-
-        Args:
-            fleet_type (str): the type of the fleet to be used
-        """
-        self.fleet_type = fleet_type
-
     def set_fleetmanager(self, fleetmanagers):
         """
         Sets the fleetmanager JID address
@@ -93,15 +85,6 @@ class NewCustomerAgent(GeoLocatedAgent):
 
         """
         self.fleetmanagers = fleetmanagers
-
-    def set_route_host(self, route_host):
-        """
-        Sets the route host server address
-        Args:
-            route_host (str): the route host server address
-
-        """
-        self.route_host = route_host
 
     def set_target_position(self, coords=None):
         """
@@ -201,17 +184,14 @@ class NewCustomerAgent(GeoLocatedAgent):
                 }
         """
         t = self.get_waiting_time()
-        return {
-            "id": self.agent_id,
-            "position": [float("{0:.6f}".format(coord)) for coord in self.current_pos],
-            "dest": [float("{0:.6f}".format(coord)) for coord in self.dest],
-            "status": self.status,
+        data = super().to_json()
+        data.update({
+            "waiting": float("{0:.2f}".format(t)) if t else None,
             "transport": self.transport_assigned.split("@")[0]
             if self.transport_assigned
-            else None,
-            "waiting": float("{0:.2f}".format(t)) if t else None,
-            "icon": self.icon,
-        }
+            else None
+        })
+        return data
 
 
 class TravelBehaviour(CyclicBehaviour):
