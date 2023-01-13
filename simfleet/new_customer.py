@@ -44,27 +44,6 @@ class NewCustomerAgent(GeoLocatedAgent):
         # type_service y fleet type no entiendo muy bien en que se diferencian
         self.type_service = "taxi"
 
-    async def setup(self):
-        try:
-            template = Template()
-            template.set_metadata("protocol", TRAVEL_PROTOCOL)
-            travel_behaviour = TravelBehaviour()
-            self.add_behaviour(travel_behaviour, template)
-            while not self.has_behaviour(travel_behaviour):
-                logger.warning(
-                    "Customer {} could not create TravelBehaviour. Retrying...".format(
-                        self.agent_id
-                    )
-                )
-                self.add_behaviour(travel_behaviour, template)
-            self.ready = True
-        except Exception as e:
-            logger.error(
-                "EXCEPTION creating TravelBehaviour in Customer {}: {}".format(
-                    self.agent_id, e
-                )
-            )
-
     def run_strategy(self):
         """import json
         Runs the strategy for the customer agent.
@@ -309,7 +288,7 @@ class CustomerStrategyBehaviour(StrategyBehaviour):
         if content is None or len(content) == 0:
             content = {
                 "customer_id": str(self.agent.jid),
-                "origin": self.agent.current_pos,
+                "origin": self.agent.get("current_pos"),
                 "dest": self.agent.dest,
             }
 
@@ -345,7 +324,7 @@ class CustomerStrategyBehaviour(StrategyBehaviour):
         reply.set_metadata("performative", ACCEPT_PERFORMATIVE)
         content = {
             "customer_id": str(self.agent.jid),
-            "origin": self.agent.current_pos,
+            "origin": self.agent.get("current_pos"),
             "dest": self.agent.dest,
         }
         reply.body = json.dumps(content)
@@ -371,7 +350,7 @@ class CustomerStrategyBehaviour(StrategyBehaviour):
         reply.set_metadata("performative", REFUSE_PERFORMATIVE)
         content = {
             "customer_id": str(self.agent.jid),
-            "origin": self.agent.current_pos,
+            "origin": self.agent.get("current_pos"),
             "dest": self.agent.dest,
         }
         reply.body = json.dumps(content)

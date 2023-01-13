@@ -12,10 +12,7 @@ from .helpers import random_position
 class GeoLocatedAgent(SimfleetAgent):
     def __init__(self, agentjid, password):
         super().__init__(agentjid, password)
-        self.current_pos = None
         self.route_host = None
-
-        # por si acaso
         self.set("current_pos", None)
 
         self.dest = None
@@ -41,12 +38,13 @@ class GeoLocatedAgent(SimfleetAgent):
             coords (list): a list coordinates (longitude and latitude)
         """
         if coords:
-            self.current_pos = coords
+            self.set("current_pos", coords)
         else:
-            self.current_pos = random_position()
+            self.set("current_pos", random_position())
         logger.debug(
-            "Agent {} position is {}".format(self.agent_id, self.current_pos)
+            "Agent {} position is {}".format(self.agent_id, self.get("current_pos"))
         )
+
     def set_initial_position(self, coords):
         self.set("current_pos", coords)
 
@@ -57,7 +55,7 @@ class GeoLocatedAgent(SimfleetAgent):
         Returns:
             list: the coordinates of the current position of the Agent (lon, lat)
         """
-        return self.current_pos
+        return self.get("current_pos")
 
     def set_target_position(self, coords=None):
         """
@@ -81,7 +79,7 @@ class GeoLocatedAgent(SimfleetAgent):
         """
         data = super().to_json()
         data.update({
-            "position": self.current_pos,
+            "position": self.get("current_pos"),
             "dest": [float("{0:.6f}".format(coord)) for coord in self.dest]
             if self.dest
             else None,
