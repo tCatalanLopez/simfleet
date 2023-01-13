@@ -52,7 +52,7 @@ class MovableMixin():
         self.dest = dest
         self.distances.append(distance)
         self.durations.append(duration)
-        behav = self.MovingBehaviour(period=1)
+        behav = MovingBehaviour(period=1)
         self.add_behaviour(behav)
 
     async def step(self):
@@ -91,17 +91,26 @@ class MovableMixin():
         """
         return await request_path(self, origin, destination, self.route_host)
 
-    class MovingBehaviour(PeriodicBehaviour):
-            """
-            This is the internal behaviour that manages the movement of the transport.
-            It is triggered when the transport has a new destination and the periodic tick
-            is recomputed at every step to show a fine animation.
-            This moving behaviour includes to update the transport coordinates as it
-            moves along the path at the specified speed.
-            """
+    async def arrived_to_destination(self):
+        """
+        Informs that the transport has arrived to its destination.
+        It recomputes the new destination and path if picking up a customer
+        or drops it and goes to WAITING status again.
+        """
+        self.set("path", None)
+        self.chunked_path = None
 
-            async def run(self):
-                await self.agent.step()
-                self.period = self.agent.animation_speed / ONESECOND_IN_MS
-                if self.agent.is_in_destination():
-                    self.agent.remove_behaviour(self)
+class MovingBehaviour(PeriodicBehaviour):
+    """
+    This is the internal behaviour that manages the movement of the transport.
+    It is triggered when the transport has a new destination and the periodic tick
+    is recomputed at every step to show a fine animation.
+    This moving behaviour includes to update the transport coordinates as it
+    moves along the path at the specified speed.
+    """
+
+    async def run(self):
+        await self.agent.step()
+        self.period = self.agent.animation_speed / ONESECOND_IN_MS
+        if self.agent.is_in_destination():
+            self.agent.remove_behaviour(self)

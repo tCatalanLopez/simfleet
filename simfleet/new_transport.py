@@ -5,12 +5,10 @@ from asyncio import CancelledError
 from collections import defaultdict
 
 from loguru import logger
-from spade.agent import Agent
 from spade.behaviour import CyclicBehaviour
 from spade.message import Message
 from spade.template import Template
 
-from simfleet.movable import MovableMixin
 from .vehicle import Vehicle
 
 from .helpers import (

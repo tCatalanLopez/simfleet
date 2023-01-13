@@ -10,7 +10,7 @@ from spade.behaviour import PeriodicBehaviour, CyclicBehaviour
 from spade.message import Message
 from spade.template import Template
 
-from simfleet.movable import MovableMixin
+from .movable import MovableMixin, MovingBehaviour
 from .geolocated_agent import GeoLocatedAgent
 
 from .helpers import (
@@ -52,10 +52,11 @@ MIN_AUTONOMY = 2
 ONESECOND_IN_MS = 1000
 
 # esto realmente excepto toda la funcionalidad del cliente es vehicle
-class Vehicle(MovableMixin,GeoLocatedAgent):
+class Vehicle(MovableMixin, GeoLocatedAgent):
     def __init__(self, agentjid, password):
         GeoLocatedAgent.__init__(self,agentjid, password)
         MovableMixin.__init__(self)
+        self.get("speed_in_kmh")
         
         self.fleetmanager_id = None
         self.registration = None
@@ -122,15 +123,6 @@ class Vehicle(MovableMixin,GeoLocatedAgent):
             self.fleet_type = content["fleet_type"]
         self.registration = status
 
-    async def arrived_to_destination(self):
-        """
-        Informs that the transport has arrived to its destination.
-        It recomputes the new destination and path if picking up a customer
-        or drops it and goes to WAITING status again.
-        """
-        self.set("path", None)
-        self.chunked_path = None
-
     async def request_access_station(self):
 
         reply = Message()
@@ -163,12 +155,7 @@ class Vehicle(MovableMixin,GeoLocatedAgent):
         Args:
             coords (list): a list coordinates (longitude and latitude)
         """
-        
         super().set_position(coords)
-
-        # esto en principio deberia irse si lo vamos a dejar como self.current_pos
-        self.set("current_pos", coords) 
-        
         if self.is_in_destination():
             logger.info(
                 "Transport {} has arrived to destination. Status: {}".format(
