@@ -377,7 +377,7 @@ class NewTransportAgent(Vehicle):
         
         if self.status == TRANSPORT_MOVING_TO_DESTINATION:
             await self.inform_customer(
-                CUSTOMER_LOCATION, {"location": self.get("current_pos")} # todo lo que sea self.get("current_pos") -> self.current_pos (si se cambia)
+                CUSTOMER_LOCATION, {"location": self.get("current_pos")} 
             )
 
     def to_json(self):
@@ -544,46 +544,6 @@ class TransportStrategyBehaviour(StrategyBehaviour):
         reply.set_metadata("protocol", REQUEST_PROTOCOL)
         reply.set_metadata("performative", ACCEPT_PERFORMATIVE)
         await self.send(reply)
-
-    async def go_to_the_station(self, station_id, dest):
-        """
-        Starts a TRAVEL_PROTOCOL to pick up a customer and get him to his destination.
-        It automatically launches all the travelling process until the customer is
-        delivered. This travelling process includes to update the transport coordinates as it
-        moves along the path at the specified speed.
-
-        Args:
-            station_id (str): the id of the customer
-            dest (list): the coordinates of the target destination of the customer
-        """
-        logger.info(
-            "Transport {} on route to station {}".format(self.agent.name, station_id)
-        )
-        self.status = TRANSPORT_MOVING_TO_STATION
-        reply = Message()
-        reply.to = station_id
-        reply.set_metadata("performative", INFORM_PERFORMATIVE)
-        reply.set_metadata("protocol", TRAVEL_PROTOCOL)
-        content = {"status": TRANSPORT_MOVING_TO_STATION}
-        reply.body = json.dumps(content)
-        self.set("current_station", station_id)
-        self.agent.current_station_dest = dest
-        await self.send(reply)
-        # informs the TravelBehaviour of the station that the transport is coming
-
-        self.agent.num_charges += 1
-        travel_km = self.agent.calculate_km_expense(self.get("current_pos"), dest)
-        self.agent.set_km_expense(travel_km)
-        try:
-            logger.debug("{} move_to station {}".format(self.agent.name, station_id))
-            await self.agent.move_to(self.agent.current_station_dest)
-        except AlreadyInDestination:
-            logger.debug(
-                "{} is already in the stations' {} position. . .".format(
-                    self.agent.name, station_id
-                )
-            )
-            await self.agent.arrived_to_station()
 
     async def send_get_stations(self, content=None):
 
