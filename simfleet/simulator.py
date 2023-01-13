@@ -1303,8 +1303,8 @@ class SimulatorAgent(Agent):
         delayed=False,
     ):
         jid = f"{name}@{self.jid.domain}"
-        # agent = TransportAgent(jid, password)
-        agent = NewTransportAgent(jid, password)
+        agent = TransportAgent(jid, password)
+        # agent = NewTransportAgent(jid, password)
         logger.debug("Creating Transport {}".format(jid))
         agent.set_id(name)
         agent.set_directory(self.get_directory().jid)
