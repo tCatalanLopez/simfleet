@@ -2,7 +2,6 @@ import asyncio
 import json
 import time
 from asyncio import CancelledError
-from collections import defaultdict
 
 from loguru import logger
 from spade.behaviour import CyclicBehaviour
@@ -221,14 +220,6 @@ class NewTransportAgent(Vehicle):
 
         # time waiting in station queue update
         self.waiting_in_queue_time = time.time()
-
-        # WAIT FOR EXPLICIT CONFIRMATION THAT IT CAN CHARGE
-        # while True:
-        #     msg = await self.receive(timeout=5)
-        #     if msg:
-        #         performative = msg.get_metadata("performative")
-        #         if performative == ACCEPT_PERFORMATIVE:
-        #             await self.begin_charging()
 
     async def begin_charging(self):
 
@@ -507,6 +498,7 @@ class TransportStrategyBehaviour(StrategyBehaviour):
             origin (list): the coordinates of the current location of the customer
             dest (list): the coordinates of the target destination of the customer
         """
+        
         logger.info(
             "Transport {} on route to customer {}".format(self.agent.name, customer_id)
         )

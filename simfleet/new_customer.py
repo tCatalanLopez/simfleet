@@ -288,7 +288,7 @@ class CustomerStrategyBehaviour(StrategyBehaviour):
         if content is None or len(content) == 0:
             content = {
                 "customer_id": str(self.agent.jid),
-                "origin": self.agent.get("current_pos"),
+                "origin": self.agent.get_position(),
                 "dest": self.agent.dest,
             }
 
@@ -324,7 +324,7 @@ class CustomerStrategyBehaviour(StrategyBehaviour):
         reply.set_metadata("performative", ACCEPT_PERFORMATIVE)
         content = {
             "customer_id": str(self.agent.jid),
-            "origin": self.agent.get("current_pos"),
+            "origin": self.agent.get_position(),
             "dest": self.agent.dest,
         }
         reply.body = json.dumps(content)
@@ -350,7 +350,7 @@ class CustomerStrategyBehaviour(StrategyBehaviour):
         reply.set_metadata("performative", REFUSE_PERFORMATIVE)
         content = {
             "customer_id": str(self.agent.jid),
-            "origin": self.agent.get("current_pos"),
+            "origin": self.agent.get_position(),
             "dest": self.agent.dest,
         }
         reply.body = json.dumps(content)
