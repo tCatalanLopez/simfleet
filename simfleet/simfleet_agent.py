@@ -98,6 +98,10 @@ class SimfleetAgent(Agent):
             return self.end_time - self.init_time
         else:
             return None
+    
+    #recordatorio de implementar
+    def setup():
+        raise NotImplementedError
 
     def to_json(self):
         """
