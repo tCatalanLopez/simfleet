@@ -291,9 +291,8 @@ class SimulatorAgent(Agent):
                 strategy=strategy,
                 delayed=delayed,
             )
-
             self.set_icon(agent, icon, default="customer")
-
+            
             if delay is not None:
                 if delay not in self.delayed_launch_agents:
                     self.delayed_launch_agents[delay] = []
@@ -1357,8 +1356,8 @@ class SimulatorAgent(Agent):
             delayed (bool, optional): launching of the agent delayed or not
         """
         jid = f"{name}@{self.jid.domain}"
-        # agent = NewCustomerAgent(jid, password)
-        agent = CustomerAgent(jid, password)
+        agent = NewCustomerAgent(jid, password)
+        # agent = CustomerAgent(jid, password)
         logger.debug("Creating Customer {}".format(jid))
         agent.set_id(name)
         agent.set_directory(self.get_directory().jid)
