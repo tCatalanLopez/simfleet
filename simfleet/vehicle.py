@@ -42,6 +42,8 @@ from .utils import (
     CUSTOMER_IN_DEST,
     CUSTOMER_LOCATION,
     TRANSPORT_MOVING_TO_STATION,
+    VEHICLE_MOVING_TO_DESTINATION,
+    VEHICLE_WAITING,
     chunk_path,
     request_path,
     StrategyBehaviour,
@@ -52,11 +54,16 @@ MIN_AUTONOMY = 2
 ONESECOND_IN_MS = 1000
 
 # esto realmente excepto toda la funcionalidad del cliente es vehicle
-class Vehicle(MovableMixin, GeoLocatedAgent):
+class VehicleAgent(MovableMixin, GeoLocatedAgent):
     def __init__(self, agentjid, password):
         GeoLocatedAgent.__init__(self, agentjid, password)
         MovableMixin.__init__(self)
+<<<<<<< HEAD
         self.get("speed_in_kmh")
+=======
+        self.status = VEHICLE_WAITING
+        self.set("speed_in_kmh", None)
+>>>>>>> todo_se_rompe
         
         self.fleetmanager_id = None
         self.registration = None
@@ -294,3 +301,81 @@ class RegistrationBehaviour(CyclicBehaviour):
                     self.agent.name, e
                 )
             )
+
+class VehicleStrategyBehaviour(StrategyBehaviour):
+    """
+    Class from which to inherit to create a vehicle strategy.
+    You must overload the ```run`` coroutine
+
+    Helper functions:
+        * ``pick_up_customer``
+        * ``send_proposal``
+        * ``cancel_proposal``
+    """
+
+    async def on_start(self):
+        logger.debug(
+            "Strategy {} started in vehicle {}".format(
+                type(self).__name__, self.agent.name
+            )
+        )
+        # self.agent.total_waiting_time = 0.0
+
+    async def go_to(self, dest):
+        """
+        Starts a TRAVEL_PROTOCOL to pick up a customer and get him to his destination.
+        It automatically launches all the travelling process until the customer is
+        delivered. This travelling process includes to update the transport coordinates as it
+        moves along the path at the specified speed.
+
+        Args:
+            dest (list): the coordinates of the target destination of the customer
+        """
+        
+        logger.info(
+            "Transport {} on route to position {}".format(self.agent.name, dest)
+        )
+        try:
+            await self.agent.move_to(dest)
+        except AlreadyInDestination:
+            await self.agent.arrived_to_destination()
+        except PathRequestException as e:
+            logger.error(
+                "Raising PathRequestException in go_to for {}".format(
+                    self.agent.name
+                )
+            )
+            raise e
+
+    async def send_confirmation_travel(self, station_id):
+        logger.info(
+            "Vehicle {} sent confirmation to station {}".format(
+                self.agent.name, station_id
+            )
+        )
+        reply = Message()
+        reply.to = station_id
+        reply.set_metadata("protocol", REQUEST_PROTOCOL)
+        reply.set_metadata("performative", ACCEPT_PERFORMATIVE)
+        await self.send(reply)
+
+    async def send_get_stations(self, content=None):
+
+        if content is None or len(content) == 0:
+            content = self.agent.request
+        msg = Message()
+        msg.to = str(self.agent.directory_id)
+        msg.set_metadata("protocol", QUERY_PROTOCOL)
+        msg.set_metadata("performative", REQUEST_PERFORMATIVE)
+        msg.body = content
+        await self.send(msg)
+
+        logger.info(
+            "Vehicle {} asked for stations to Directory {} for type {}.".format(
+                self.agent.name, self.agent.directory_id, self.agent.request
+            )
+        )
+
+    async def run(self):
+        raise NotImplementedError
+        
