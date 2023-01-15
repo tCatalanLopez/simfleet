@@ -34,7 +34,6 @@ class NewCustomerAgent(GeoLocatedAgent):
     def __init__(self, agentjid, password):
         super().__init__(agentjid, password)
         
-        # este se podría pasar a geolocated, realmente todo lo que necesite una flota es un geolocated, y si no hay que reescribirlo todo otra vez
         self.fleetmanagers = None
         self.status = CUSTOMER_WAITING
         self.transport_assigned = None
@@ -89,29 +88,6 @@ class NewCustomerAgent(GeoLocatedAgent):
             bool: whether the customer is at its destination or not
         """
         return self.status == CUSTOMER_IN_DEST or self.get_position() == self.dest
-
-    async def request_path(self, origin, destination):
-        """
-        Requests a path between two points (origin and destination) using the route server.
-
-        Args:
-            origin (list): the coordinates of the origin of the requested path
-            destination (list): the coordinates of the end of the requested path
-
-        Returns:
-            list, float, float: A list of points that represent the path from origin to destination, the distance and
-            the estimated duration
-
-        Examples:
-            >>> path, distance, duration = await self.request_path(origin=[0,0], destination=[1,1])
-            >>> print(path)
-            [[0,0], [0,1], [1,1]]
-            >>> print(distance)
-            2.0
-            >>> print(duration)
-            3.24
-        """
-        return await request_path(self, origin, destination, self.route_host)
 
     def get_waiting_time(self):
         """
@@ -217,7 +193,7 @@ class TravelBehaviour(CyclicBehaviour):
                     )
                 elif status == CUSTOMER_LOCATION:
                     coords = content["location"]
-                    self.agent.set_position(coords)
+                    self.agent.set("current_pos", coords)
         except CancelledError:
             logger.debug("Cancelling async tasks...")
         except Exception as e:
@@ -288,7 +264,7 @@ class CustomerStrategyBehaviour(StrategyBehaviour):
         if content is None or len(content) == 0:
             content = {
                 "customer_id": str(self.agent.jid),
-                "origin": self.agent.get_position(),
+                "origin": self.agent.get("current_pos"),
                 "dest": self.agent.dest,
             }
 
@@ -324,7 +300,7 @@ class CustomerStrategyBehaviour(StrategyBehaviour):
         reply.set_metadata("performative", ACCEPT_PERFORMATIVE)
         content = {
             "customer_id": str(self.agent.jid),
-            "origin": self.agent.get_position(),
+            "origin": self.agent.get("current_pos"),
             "dest": self.agent.dest,
         }
         reply.body = json.dumps(content)
@@ -350,7 +326,7 @@ class CustomerStrategyBehaviour(StrategyBehaviour):
         reply.set_metadata("performative", REFUSE_PERFORMATIVE)
         content = {
             "customer_id": str(self.agent.jid),
-            "origin": self.agent.get_position(),
+            "origin": self.agent.get("current_pos"),
             "dest": self.agent.dest,
         }
         reply.body = json.dumps(content)
