@@ -16,7 +16,17 @@
             "fleet_type": "drone"
         }
     ],
-    
+    "vehicles": [
+        {
+            "speed": 2000,
+            "fleet": "testVehicle@gtirouter.dsic.upv.es",
+            "fleet_type": "drone",
+            "position": [40.41192762537371, -3.7105464935302734],
+            "destination": [40.446163241978304,-3.7075424194335938],
+            "password": "secret",
+            "name": "testVehicle"
+        }
+    ],
     "transports": [
         {
             "speed": 2000,

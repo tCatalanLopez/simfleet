@@ -1,3 +1,4 @@
+from asyncio import sleep
 import json
 
 from loguru import logger
@@ -289,8 +290,7 @@ class AlwaysMoveStrategyBehaviour(VehicleStrategyBehaviour):
     async def on_start(self):
         # esto es la base, el metodo go_to() debería activarlo para que al recibir un destino, se ponga en marcha, pero si ya tiene un destino, empieza a moverse
         await self.agent.move_to(self.agent.dest)
-    async def run():
-        pass
+
     #     msg = await self.receive(timeout=5)
     #     if not msg:
     #         return
