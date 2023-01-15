@@ -112,3 +112,6 @@ class SimfleetAgent(Agent):
             "end_time": self.end_time
         })
         return data
+
+    def set_up():
+        raise NotImplementedError
