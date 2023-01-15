@@ -20,6 +20,7 @@ from .new_customer import NewCustomerAgent
 from .new_transport import NewTransportAgent
 from .directory import DirectoryAgent
 from .fleetmanager import FleetManagerAgent
+from .new_fleetmanager import NewFleetManagerAgent
 from .station import StationAgent
 from .transport import TransportAgent
 from .vehicle import VehicleAgent 
@@ -1344,7 +1345,8 @@ class SimulatorAgent(Agent):
         self, name, password, fleet_type, strategy=None, icon=None
     ):
         jid = f"{name}@{self.jid.domain}"
-        agent = FleetManagerAgent(jid, password)
+        # agent = FleetManagerAgent(jid, password)
+        agent = NewFleetManagerAgent(jid, password)
         logger.debug("Creating FleetManager {}".format(jid))
         agent.set_id(name)
         agent.set_directory(self.get_directory().jid)

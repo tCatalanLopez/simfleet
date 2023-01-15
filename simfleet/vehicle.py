@@ -58,12 +58,8 @@ class VehicleAgent(MovableMixin, GeoLocatedAgent):
     def __init__(self, agentjid, password):
         GeoLocatedAgent.__init__(self, agentjid, password)
         MovableMixin.__init__(self)
-<<<<<<< HEAD
-        self.get("speed_in_kmh")
-=======
         self.status = VEHICLE_WAITING
         self.set("speed_in_kmh", None)
->>>>>>> todo_se_rompe
         
         self.fleetmanager_id = None
         self.registration = None
