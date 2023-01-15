@@ -24,7 +24,6 @@ class SimfleetAgent(Agent):
         self.directory_id = None
         self.status = None
         self.fleet_type = None
-        self.registration = None
 
         self.init_time = None
         self.end_time = None

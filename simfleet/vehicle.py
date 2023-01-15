@@ -56,10 +56,10 @@ class Vehicle(MovableMixin, GeoLocatedAgent):
     def __init__(self, agentjid, password):
         GeoLocatedAgent.__init__(self, agentjid, password)
         MovableMixin.__init__(self)
-        self.set("speed_in_kmh", None)
+        self.get("speed_in_kmh")
         
         self.fleetmanager_id = None
-        
+        self.registration = None
 
     async def setup(self):
         try:
