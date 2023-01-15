@@ -8,7 +8,7 @@ from spade.behaviour import CyclicBehaviour
 from spade.message import Message
 from spade.template import Template
 
-from .vehicle import Vehicle
+from .vehicle import VehicleAgent
 
 from .helpers import (
     distance_in_meters,
@@ -47,7 +47,7 @@ MIN_AUTONOMY = 2
 ONESECOND_IN_MS = 1000
 
 # esto realmente excepto toda la funcionalidad del cliente es vehicle
-class NewTransportAgent(Vehicle):
+class NewTransportAgent(VehicleAgent):
     def __init__(self, agentjid, password):
         super().__init__(agentjid, password)
         self.status = TRANSPORT_WAITING

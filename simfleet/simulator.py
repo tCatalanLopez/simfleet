@@ -23,6 +23,7 @@ from .directory import DirectoryAgent
 from .fleetmanager import FleetManagerAgent
 from .station import StationAgent
 from .transport import TransportAgent
+from .vehicle import VehicleAgent 
 from .utils import load_class, status_to_str, avg, request_path as async_request_path
 
 faker_factory = faker.Factory.create()
@@ -74,6 +75,7 @@ class SimulatorAgent(Agent):
 
         self.fleetmanager_strategy = None
         self.transport_strategy = None
+        self.vehicle_strategy = None
         self.customer_strategy = None
         self.directory_strategy = None
         self.station_strategy = None
@@ -85,6 +87,7 @@ class SimulatorAgent(Agent):
         self.set_default_strategies(
             config.fleetmanager_strategy,
             config.transport_strategy,
+            config.vehicle_strategy,
             config.customer_strategy,
             config.directory_strategy,
             config.station_strategy,
@@ -178,6 +181,13 @@ class SimulatorAgent(Agent):
             logger.exception("EXCEPTION creating Transport agents batch {}".format(e))
         try:
             future = self.submit(
+                self.async_create_agents_batch_vehicle(self.config["vehicles"])
+            )
+            all_coroutines += future.result()
+        except Exception as e:
+            logger.exception("EXCEPTION creating Vehicle agents batch {}".format(e))
+        try:
+            future = self.submit(
                 self.async_create_agents_batch_customer(self.config["customers"])
             )
             all_coroutines += future.result()
@@ -249,6 +259,51 @@ class SimulatorAgent(Agent):
                 strategy=strategy,
                 autonomy=autonomy,
                 current_autonomy=current_autonomy,
+                delayed=delayed,
+            )
+            self.set_icon(agent, icon, default="transport")
+
+            if delay is not None:
+                if delay not in self.delayed_launch_agents:
+                    self.delayed_launch_agents[delay] = []
+                self.delayed_launch_agents[delay].append(agent)
+            else:
+                coros.append(agent.start())
+        return coros
+        
+    async def async_create_agents_batch_vehicle(self, agents: list) -> List:
+        coros = []
+        for vehicle in agents:
+            name = vehicle["name"]
+            logger.debug("vehicle creation batch = {}".format(name))
+            password = (
+                vehicle["password"]
+                if "password" in vehicle
+                else faker_factory.password()
+            )
+
+            position = vehicle["position"]
+            fleetmanager = vehicle["fleet"]
+            fleet_type = vehicle["fleet_type"]
+            target = vehicle["destination"]
+            speed = vehicle.get("speed")
+            strategy = vehicle.get("strategy")
+            icon = vehicle.get("icon")
+            delay = vehicle["delay"] if "delay" in vehicle else None
+
+            delayed = False
+            if delay is not None:
+                delayed = True
+
+            agent = self.create_vehicle_agent(
+                name,
+                password,
+                position=position,
+                speed=speed,
+                fleet_type=fleet_type,
+                target=target,
+                fleetmanager=fleetmanager,
+                strategy=strategy,
                 delayed=delayed,
             )
             self.set_icon(agent, icon, default="transport")
@@ -391,6 +446,7 @@ class SimulatorAgent(Agent):
                             + list(self.agent.transport_agents.values())
                             + list(self.agent.customer_agents.values())
                             + list(self.agent.station_agents.values())
+                            + list(self.agent.vehicle_agents.values())
                         )
                         while not all([agent.is_ready() for agent in all_agents]):
                             logger.debug("Waiting for all agents to be ready")
@@ -404,6 +460,11 @@ class SimulatorAgent(Agent):
                             transport.run_strategy()
                             logger.debug(
                                 f"Running strategy {self.agent.transport_strategy} to transport {transport.name}"
+                            )
+                        for vehicle in self.agent.vehicle_agents.values():
+                            vehicle.run_strategy()
+                            logger.debug(
+                                f"Running strategy {self.agent.vehicle_strategy} to transport {vehicle.name}"
                             )
                         for customer in self.agent.customer_agents.values():
                             customer.run_strategy()
@@ -595,6 +656,16 @@ class SimulatorAgent(Agent):
             dict: a dict of ``TransportAgent`` with the name in the key
         """
         return self.get("transport_agents")
+
+    @property
+    def vehicle_agents(self):
+        """
+        Gets the dict of registered vehicles
+
+        Returns:
+            dict: a dict of ``VehicleAgent`` with the name in the key
+        """
+        return self.get("vehicle_agents")
 
     @property
     def customer_agents(self):
@@ -942,6 +1013,7 @@ class SimulatorAgent(Agent):
         """
         self.set("manager_agents", {})
         self.set("transport_agents", {})
+        self.set("vehicle_agents", {})
         self.set("customer_agents", {})
         self.set("station_agents", {})
         self.simulation_time = None
@@ -961,6 +1033,11 @@ class SimulatorAgent(Agent):
             "transport_agents",
             {jid: agent for jid, agent in agents.items() if not agent.stopped},
         )
+        agents = self.get("vehicle_agents")
+        self.set(
+            "vehicle_agents",
+            {jid: agent for jid, agent in agents.items() if not agent.stopped},
+        )
         agents = self.get("customer_agents")
         self.set(
             "customer_agents",
@@ -971,6 +1048,7 @@ class SimulatorAgent(Agent):
             "station_agents",
             {jid: agent for jid, agent in agents.items() if not agent.stopped},
         )
+        
         self.simulation_time = None
         self.simulation_init_time = None
 
@@ -1266,8 +1344,8 @@ class SimulatorAgent(Agent):
         self, name, password, fleet_type, strategy=None, icon=None
     ):
         jid = f"{name}@{self.jid.domain}"
-        # agent = FleetManagerAgent(jid, password)
-        agent = NewFleetManagerAgent(jid, password)
+        agent = FleetManagerAgent(jid, password)
+        # agent = NewFleetManagerAgent(jid, password)
         logger.debug("Creating FleetManager {}".format(jid))
         agent.set_id(name)
         agent.set_directory(self.get_directory().jid)
@@ -1287,6 +1365,50 @@ class SimulatorAgent(Agent):
         agent.is_launched = True
 
         self.submit(self.async_start_agent(agent))
+
+        return agent
+
+    def create_vehicle_agent(
+        self,
+        name,
+        password,
+        fleet_type,
+        fleetmanager,
+        position,
+        strategy=None,
+        speed=None,
+        delayed=False,
+        target=None
+    ):
+        jid = f"{name}@{self.jid.domain}"
+        # agent = TransportAgent(jid, password)
+        agent = VehicleAgent(jid, password)
+        logger.debug("Creating Transport {}".format(jid))
+        agent.set_id(name)
+        agent.set_directory(self.get_directory().jid)
+        logger.debug("Assigning type {} to transport {}".format(fleet_type, name))
+        agent.set_fleet_type(fleet_type)
+        agent.set_fleetmanager(fleetmanager)
+        agent.set_route_host(self.route_host)
+        agent.set_directory(self.get_directory().jid)
+        agent.set_target_position(target)
+        
+        agent.set_initial_position(position)
+
+        if speed:
+            agent.set_speed(speed)
+
+        if strategy:
+            agent.strategy = load_class(strategy)
+        else:
+            agent.strategy = self.vehicle_strategy
+
+        if self.simulation_running:
+            agent.run_strategy()
+        self.add_vehicle(agent)
+
+        if not delayed:
+            agent.is_launched = True  # TODO
 
         return agent
 
@@ -1358,8 +1480,8 @@ class SimulatorAgent(Agent):
             delayed (bool, optional): launching of the agent delayed or not
         """
         jid = f"{name}@{self.jid.domain}"
-        agent = NewCustomerAgent(jid, password)
-        # agent = CustomerAgent(jid, password)
+        # agent = NewCustomerAgent(jid, password)
+        agent = CustomerAgent(jid, password)
         logger.debug("Creating Customer {}".format(jid))
         agent.set_id(name)
         agent.set_directory(self.get_directory().jid)
@@ -1447,7 +1569,15 @@ class SimulatorAgent(Agent):
         """
         with self.simulation_mutex:
             self.get("transport_agents")[agent.name] = agent
+    def add_vehicle(self, agent):
+        """
+        Adds a new ``VehicleAgent`` to the store.
 
+        Args:
+            agent (``VehicleAgent``): the instance of the VehicleAgent to be added
+        """
+        with self.simulation_mutex:
+            self.get("vehicle_agents")[agent.name] = agent
     def add_customer(self, agent):
         """
         Adds a new :class:`CustomerAgent` to the store.
@@ -1472,6 +1602,7 @@ class SimulatorAgent(Agent):
         self,
         fleetmanager_strategy,
         transport_strategy,
+        vehicle_strategy,
         customer_strategy,
         directory_strategy,
         station_strategy,
@@ -1489,6 +1620,7 @@ class SimulatorAgent(Agent):
         """
         self.fleetmanager_strategy = load_class(fleetmanager_strategy)
         self.transport_strategy = load_class(transport_strategy)
+        self.vehicle_strategy = load_class(vehicle_strategy)
         self.customer_strategy = load_class(customer_strategy)
         self.directory_strategy = load_class(directory_strategy)
         self.station_strategy = load_class(station_strategy)
@@ -1496,6 +1628,7 @@ class SimulatorAgent(Agent):
             "Loaded default strategy classes: {}, {}, {}, {} and {}".format(
                 self.fleetmanager_strategy,
                 self.transport_strategy,
+                self.vehicle_strategy,
                 self.customer_strategy,
                 self.directory_strategy,
                 self.station_strategy,
