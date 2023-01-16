@@ -54,6 +54,27 @@ class NewCustomerAgent(GeoLocatedAgent):
             template2.set_metadata("protocol", QUERY_PROTOCOL)
             self.add_behaviour(self.strategy(), template1 | template2)
             self.running_strategy = True
+    
+    async def setup(self):
+        try:
+            template = Template()
+            template.set_metadata("protocol", TRAVEL_PROTOCOL)
+            travel_behaviour = TravelBehaviour()
+            self.add_behaviour(travel_behaviour, template)
+            while not self.has_behaviour(travel_behaviour):
+                logger.warning(
+                    "Customer {} could not create TravelBehaviour. Retrying...".format(
+                        self.agent_id
+                    )
+                )
+                self.add_behaviour(travel_behaviour, template)
+            self.ready = True
+        except Exception as e:
+            logger.error(
+                "EXCEPTION creating TravelBehaviour in Customer {}: {}".format(
+                    self.agent_id, e
+                )
+            )
 
     def set_fleetmanager(self, fleetmanagers):
         """

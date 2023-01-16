@@ -79,8 +79,10 @@ class GeoLocatedAgent(SimfleetAgent):
         """
         data = super().to_json()
         data.update({
-            "position": self.get("current_pos"),
-            "dest": [float("{0:.6f}".format(coord)) for coord in self.dest]
+            "position": [
+                float(coord) for coord in self.get("current_pos")
+            ],
+            "dest": [float(coord) for coord in self.dest]
             if self.dest
             else None,
             "icon": self.icon

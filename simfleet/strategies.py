@@ -5,8 +5,15 @@ from loguru import logger
 
 from .vehicle import VehicleStrategyBehaviour
 
-from .customer import CustomerStrategyBehaviour
-from .fleetmanager import FleetManagerStrategyBehaviour
+# from .customer import CustomerStrategyBehaviour
+from .new_customer import CustomerStrategyBehaviour
+
+# from .fleetmanager import FleetManagerStrategyBehaviour
+from .new_fleetmanager import FleetManagerStrategyBehaviour
+
+# from .transport import TransportStrategyBehaviour
+from .new_transport import TransportStrategyBehaviour
+
 from .helpers import PathRequestException
 from .protocol import (
     REQUEST_PERFORMATIVE,
@@ -18,7 +25,7 @@ from .protocol import (
     QUERY_PROTOCOL,
     REQUEST_PROTOCOL,
 )
-from .transport import TransportStrategyBehaviour
+
 from .utils import (
     TRANSPORT_WAITING,
     TRANSPORT_WAITING_FOR_APPROVAL,

@@ -1345,8 +1345,8 @@ class SimulatorAgent(Agent):
         self, name, password, fleet_type, strategy=None, icon=None
     ):
         jid = f"{name}@{self.jid.domain}"
-        # agent = FleetManagerAgent(jid, password)
-        agent = NewFleetManagerAgent(jid, password)
+        agent = FleetManagerAgent(jid, password)
+        # agent = NewFleetManagerAgent(jid, password)
         logger.debug("Creating FleetManager {}".format(jid))
         agent.set_id(name)
         agent.set_directory(self.get_directory().jid)
@@ -1481,8 +1481,8 @@ class SimulatorAgent(Agent):
             delayed (bool, optional): launching of the agent delayed or not
         """
         jid = f"{name}@{self.jid.domain}"
-        # agent = NewCustomerAgent(jid, password)
-        agent = CustomerAgent(jid, password)
+        agent = NewCustomerAgent(jid, password)
+        # agent = CustomerAgent(jid, password)
         logger.debug("Creating Customer {}".format(jid))
         agent.set_id(name)
         agent.set_directory(self.get_directory().jid)
