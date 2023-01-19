@@ -76,55 +76,6 @@ class AcceptAlwaysStrategyBehaviour(TransportStrategyBehaviour):
     """
 
     async def run(self):
-        if self.agent.needs_charging():
-            if self.agent.stations is None or len(self.agent.stations) < 1:
-                logger.warning(
-                    "Transport {} looking for a station.".format(self.agent.name)
-                )
-                await self.send_get_stations()
-            else:
-                # choice of closest station
-                station_positions = []
-                for key in self.agent.stations.keys():
-                    dic = self.agent.stations.get(key)
-                    station_positions.append((dic["jid"], dic["position"]))
-                closest_station = min(
-                    station_positions,
-                    key=lambda x: distance_in_meters(x[1], self.agent.get_position()),
-                )
-                # closest_station = min( station_positions, key = lambda x: request_route_to_server(x[1], self.agent.get_position(), "http://osrm.gti-ia.upv.es/")[1])
-
-                # closest_station = min( list(self.agent.stations), key = lambda x: distance_in_meters( x['position'], self.agent.get_position() ) )
-                logger.info("Closest station {}".format(closest_station))
-                station = closest_station[0]
-
-                # station = random.choice(list(self.agent.stations.keys()))
-                position = self.agent.stations[station]["position"]
-                logger.info(
-                    "Transport {} selected station {}.".format(self.agent.name, station)
-                )
-
-                try:
-                    # transport moves to selected station
-                    self.agent.status = TRANSPORT_MOVING_TO_STATION
-                    await self.go_to_the_station(station, position)
-                except PathRequestException:
-                    logger.error(
-                        "Transport {} could not get a path to station {}. Cancelling...".format(
-                            self.agent.name, station
-                        )
-                    )
-                    self.agent.status = TRANSPORT_WAITING
-                    await self.cancel_proposal(station)
-                except Exception as e:
-                    logger.error(
-                        "Unexpected error in transport {}: {}".format(
-                            self.agent.name, e
-                        )
-                    )
-                    await self.cancel_proposal(station)
-                    self.agent.status = TRANSPORT_WAITING
-
         msg = await self.receive(timeout=5)
         if not msg:
             return
@@ -137,18 +88,7 @@ class AcceptAlwaysStrategyBehaviour(TransportStrategyBehaviour):
         performative = msg.get_metadata("performative")
         protocol = msg.get_metadata("protocol")
 
-        if protocol == QUERY_PROTOCOL:
-            if performative == INFORM_PERFORMATIVE:
-                self.agent.stations = content
-                logger.info(
-                    "Got list of current stations: {}".format(
-                        list(self.agent.stations.keys())
-                    )
-                )
-            elif performative == CANCEL_PERFORMATIVE:
-                logger.info("Cancellation of request for stations information.")
-
-        elif protocol == REQUEST_PROTOCOL:
+        if protocol == REQUEST_PROTOCOL:
             logger.debug(
                 "Transport {} received request protocol from customer/station.".format(
                     self.agent.name
@@ -157,12 +97,8 @@ class AcceptAlwaysStrategyBehaviour(TransportStrategyBehaviour):
 
             if performative == REQUEST_PERFORMATIVE:
                 if self.agent.status == TRANSPORT_WAITING:
-                    if not self.has_enough_autonomy(content["origin"], content["dest"]):
-                        await self.cancel_proposal(content["customer_id"])
-                        self.agent.status = TRANSPORT_NEEDS_CHARGING
-                    else:
-                        await self.send_proposal(content["customer_id"], {})
-                        self.agent.status = TRANSPORT_WAITING_FOR_APPROVAL
+                    await self.send_proposal(content["customer_id"], {})
+                    self.agent.status = TRANSPORT_WAITING_FOR_APPROVAL
 
             elif performative == ACCEPT_PERFORMATIVE:
                 if self.agent.status == TRANSPORT_WAITING_FOR_APPROVAL:
@@ -192,16 +128,6 @@ class AcceptAlwaysStrategyBehaviour(TransportStrategyBehaviour):
                         )
                         await self.cancel_proposal(content["customer_id"])
                         self.agent.status = TRANSPORT_WAITING
-                elif self.agent.status == TRANSPORT_IN_STATION_PLACE:
-                    if content.get("station_id") is not None:
-                        # debug
-                        logger.info(
-                            "Transport {} received a message with ACCEPT_PERFORMATIVE from {}".format(
-                                self.agent.name, content["station_id"]
-                            )
-                        )
-                        await self.charge_allowed()
-
                 else:
                     await self.cancel_proposal(content["customer_id"])
 
@@ -212,12 +138,6 @@ class AcceptAlwaysStrategyBehaviour(TransportStrategyBehaviour):
                     )
                 )
                 self.agent.status = TRANSPORT_WAITING
-
-            elif performative == INFORM_PERFORMATIVE:
-                if self.agent.status == TRANSPORT_CHARGING:
-                    if content["status"] == TRANSPORT_CHARGED:
-                        self.agent.transport_charged()
-                        await self.agent.drop_station()
 
             elif performative == CANCEL_PERFORMATIVE:
                 logger.info(
@@ -250,7 +170,7 @@ class AcceptFirstRequestBehaviour(CustomerStrategyBehaviour):
                 elif performative == CANCEL_PERFORMATIVE:
                     logger.info(
                         "Cancellation of request for {} information".format(
-                            self.agent.type_service
+                            self.agent.fleet_type
                         )
                     )
                     return

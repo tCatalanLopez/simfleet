@@ -179,38 +179,6 @@ class VehicleAgent(MovableMixin, GeoLocatedAgent):
         """
         self.set("speed_in_kmh", speed_in_kmh)
 
-    def is_in_destination(self):
-        """
-        Checks if the transport has arrived to its destination.
-
-        Returns:
-            bool: whether the transport is at its destination or not
-        """
-        return self.dest == self.get_position()
-
-    # ChargeableMixin
-    def set_km_expense(self, expense=0):
-        self.current_autonomy_km -= expense
-    
-    # ChargeableMixin
-    def set_autonomy(self, autonomy, current_autonomy=None):
-        self.max_autonomy_km = autonomy
-        self.current_autonomy_km = (
-            current_autonomy if current_autonomy is not None else autonomy
-        )
-    
-    # ChargeableMixin
-    def get_autonomy(self):
-        return self.current_autonomy_km
-
-    # ChargeableMixin
-    def calculate_km_expense(self, origin, start, dest=None):
-        fir_distance = distance_in_meters(origin, start)
-        sec_distance = distance_in_meters(start, dest)
-        if dest is None:
-            sec_distance = 0
-        return (fir_distance + sec_distance) // 1000
-
     def to_json(self):
         """
         Serializes the main information of a transport agent to a JSON format.
@@ -342,35 +310,6 @@ class VehicleStrategyBehaviour(StrategyBehaviour):
                 )
             )
             raise e
-
-    async def send_confirmation_travel(self, station_id):
-        logger.info(
-            "Vehicle {} sent confirmation to station {}".format(
-                self.agent.name, station_id
-            )
-        )
-        reply = Message()
-        reply.to = station_id
-        reply.set_metadata("protocol", REQUEST_PROTOCOL)
-        reply.set_metadata("performative", ACCEPT_PERFORMATIVE)
-        await self.send(reply)
-
-    async def send_get_stations(self, content=None):
-
-        if content is None or len(content) == 0:
-            content = self.agent.request
-        msg = Message()
-        msg.to = str(self.agent.directory_id)
-        msg.set_metadata("protocol", QUERY_PROTOCOL)
-        msg.set_metadata("performative", REQUEST_PERFORMATIVE)
-        msg.body = content
-        await self.send(msg)
-
-        logger.info(
-            "Vehicle {} asked for stations to Directory {} for type {}.".format(
-                self.agent.name, self.agent.directory_id, self.agent.request
-            )
-        )
 
     async def run(self):
         raise NotImplementedError

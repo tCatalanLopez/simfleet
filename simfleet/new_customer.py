@@ -39,9 +39,10 @@ class NewCustomerAgent(GeoLocatedAgent):
         self.transport_assigned = None
         self.waiting_for_pickup_time = None
         self.pickup_time = None
+        self.target = None
 
-        # type_service y fleet type no entiendo muy bien en que se diferencian
-        self.type_service = "taxi"
+        # esto igual hay que pasarlo al setup
+        self.fleet_type = "taxi"
 
     def run_strategy(self):
         """import json
@@ -94,11 +95,11 @@ class NewCustomerAgent(GeoLocatedAgent):
             coords (list): a list coordinates (longitude and latitude)
         """
         if coords:
-            self.dest = coords
+            self.target = coords
         else:
-            self.dest = random_position()
+            self.target = random_position()
         logger.debug(
-            "Customer {} target position is {}".format(self.agent_id, self.dest)
+            "Customer {} target position is {}".format(self.agent_id, self.target)
         )
 
     def is_in_destination(self):
@@ -108,7 +109,7 @@ class NewCustomerAgent(GeoLocatedAgent):
         Returns:
             bool: whether the customer is at its destination or not
         """
-        return self.status == CUSTOMER_IN_DEST or self.get_position() == self.dest
+        return self.status == CUSTOMER_IN_DEST or self.get_position() == self.target
 
     def get_waiting_time(self):
         """
@@ -266,7 +267,7 @@ class CustomerStrategyBehaviour(StrategyBehaviour):
 
         logger.info(
             "Customer {} asked for managers to directory {} for type {}.".format(
-                self.agent.name, self.agent.directory_id, self.agent.type_service
+                self.agent.name, self.agent.directory_id, self.agent.fleet_type
             )
         )
 
@@ -280,13 +281,13 @@ class CustomerStrategyBehaviour(StrategyBehaviour):
         Args:
             content (dict): Optional content dictionary
         """
-        if not self.agent.dest:
-            self.agent.dest = random_position()
+        if not self.agent.target:
+            self.agent.target = random_position()
         if content is None or len(content) == 0:
             content = {
                 "customer_id": str(self.agent.jid),
                 "origin": self.agent.get("current_pos"),
-                "dest": self.agent.dest,
+                "target": self.agent.target,
             }
 
         if self.agent.fleetmanagers is not None:
@@ -301,7 +302,7 @@ class CustomerStrategyBehaviour(StrategyBehaviour):
                 await self.send(msg)
             logger.info(
                 "Customer {} asked for a transport to {}.".format(
-                    self.agent.name, self.agent.dest
+                    self.agent.name, self.agent.target
                 )
             )
         else:
@@ -322,7 +323,7 @@ class CustomerStrategyBehaviour(StrategyBehaviour):
         content = {
             "customer_id": str(self.agent.jid),
             "origin": self.agent.get("current_pos"),
-            "dest": self.agent.dest,
+            "dest": self.agent.target,
         }
         reply.body = json.dumps(content)
         await self.send(reply)
@@ -348,7 +349,7 @@ class CustomerStrategyBehaviour(StrategyBehaviour):
         content = {
             "customer_id": str(self.agent.jid),
             "origin": self.agent.get("current_pos"),
-            "dest": self.agent.dest,
+            "dest": self.agent.target,
         }
         reply.body = json.dumps(content)
 

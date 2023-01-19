@@ -59,30 +59,6 @@ class NewTransportAgent(VehicleAgent):
 
         self.request = "station"
         self.stations = None
-        self.current_autonomy_km = 2000
-        self.max_autonomy_km = 2000
-        self.num_charges = 0
-        self.set("current_station", None)
-        self.current_station_dest = None
-
-        # capacity?
-
-        # waiting time statistics
-        self.waiting_in_queue_time = None
-        self.charge_time = None
-        self.total_waiting_time = 0.0
-        self.total_charging_time = 0.0
-
-        # Transport in station place event
-        self.set("in_station_place", None)  # new
-
-        self.transport_in_station_place_event = asyncio.Event(loop=self.loop)
-
-        def transport_in_station_place_callback(old, new):
-            if not self.transport_in_station_place_event.is_set() and new is True:
-                self.transport_in_station_place_event.set()
-
-        self.transport_in_station_place_callback = transport_in_station_place_callback
 
         # Customer in transport event
         self.customer_in_transport_event = asyncio.Event(loop=self.loop)
@@ -189,80 +165,6 @@ class NewTransportAgent(VehicleAgent):
         else:  # elif self.status == TRANSPORT_MOVING_TO_DESTINATION:
             await self.drop_customer()
 
-    async def arrived_to_station(self, station_id=None):
-        """
-        Informs that the transport has arrived to its destination.
-        It recomputes the new destination and path if picking up a customer
-        or drops it and goes to WAITING status again.
-        """
-        # self.status = TRANSPORT_IN_STATION_PLACE new
-
-        # ask for a place to charge
-        logger.info(
-            "Transport {} arrived to station {} and is waiting to charge".format(
-                self.agent_id, self.get("current_station")
-            )
-        )
-        self.set("in_station_place", True)  # new
-
-    async def request_access_station(self):
-
-        reply = Message()
-        reply.to = self.get("current_station")
-        reply.set_metadata("protocol", REQUEST_PROTOCOL)
-        reply.set_metadata("performative", ACCEPT_PERFORMATIVE)
-        logger.debug(
-            "{} requesting access to {}".format(
-                self.name, self.get("current_station"), reply.body
-            )
-        )
-        await self.send(reply)
-
-        # time waiting in station queue update
-        self.waiting_in_queue_time = time.time()
-
-    async def begin_charging(self):
-
-        # trigger charging
-        self.set("path", None)
-        self.chunked_path = None
-
-        data = {
-            "status": TRANSPORT_IN_STATION_PLACE,
-            "need": self.max_autonomy_km - self.current_autonomy_km,
-        }
-        logger.debug(
-            "Transport {} with autonomy {} tells {} that it needs to charge "
-            "{} km/autonomy".format(
-                self.agent_id,
-                self.current_autonomy_km,
-                self.get("current_station"),
-                self.max_autonomy_km - self.current_autonomy_km,
-            )
-        )
-        await self.inform_station(data)
-        self.status = TRANSPORT_CHARGING
-        logger.info(
-            "Transport {} has started charging in the station {}.".format(
-                self.agent_id, self.get("current_station")
-            )
-        )
-
-        # time waiting in station queue update
-        self.charge_time = time.time()
-        elapsed_time = self.charge_time - self.waiting_in_queue_time
-        if elapsed_time > 0.1:
-            self.total_waiting_time += elapsed_time
-
-    def needs_charging(self):
-        return (self.status == TRANSPORT_NEEDS_CHARGING) or (
-            self.get_autonomy() <= MIN_AUTONOMY and self.status in [TRANSPORT_WAITING]
-        )
-
-    def transport_charged(self):
-        self.current_autonomy_km = self.max_autonomy_km
-        self.total_charging_time += time.time() - self.charge_time
-
     async def drop_customer(self):
         """
         Drops the customer that the transport is carring in the current location.
@@ -290,23 +192,6 @@ class NewTransportAgent(VehicleAgent):
             )
         )
         self.set("current_station", None)
-
-    async def inform_station(self, data=None):
-        """
-        Sends a message to the current assigned customer to inform her about a new status.
-
-        Args:
-            status (int): The new status code
-            data (dict, optional): complementary info about the status
-        """
-        if data is None:
-            data = {}
-        msg = Message()
-        msg.to = self.get("current_station")
-        msg.set_metadata("protocol", TRAVEL_PROTOCOL)
-        msg.set_metadata("performative", INFORM_PERFORMATIVE)
-        msg.body = json.dumps(data)
-        await self.send(msg)
 
     async def inform_customer(self, status, data=None):
         """
@@ -498,7 +383,6 @@ class TransportStrategyBehaviour(StrategyBehaviour):
             origin (list): the coordinates of the current location of the customer
             dest (list): the coordinates of the target destination of the customer
         """
-        
         logger.info(
             "Transport {} on route to customer {}".format(self.agent.name, customer_id)
         )
@@ -524,35 +408,6 @@ class TransportStrategyBehaviour(StrategyBehaviour):
                 )
             )
             raise e
-
-    async def send_confirmation_travel(self, station_id):
-        logger.info(
-            "Transport {} sent confirmation to station {}".format(
-                self.agent.name, station_id
-            )
-        )
-        reply = Message()
-        reply.to = station_id
-        reply.set_metadata("protocol", REQUEST_PROTOCOL)
-        reply.set_metadata("performative", ACCEPT_PERFORMATIVE)
-        await self.send(reply)
-
-    async def send_get_stations(self, content=None):
-
-        if content is None or len(content) == 0:
-            content = self.agent.request
-        msg = Message()
-        msg.to = str(self.agent.directory_id)
-        msg.set_metadata("protocol", QUERY_PROTOCOL)
-        msg.set_metadata("performative", REQUEST_PERFORMATIVE)
-        msg.body = content
-        await self.send(msg)
-
-        logger.info(
-            "Transport {} asked for stations to Directory {} for type {}.".format(
-                self.agent.name, self.agent.directory_id, self.agent.request
-            )
-        )
 
     async def send_proposal(self, customer_id, content=None):
         """
@@ -597,6 +452,10 @@ class TransportStrategyBehaviour(StrategyBehaviour):
         reply.set_metadata("performative", CANCEL_PERFORMATIVE)
         reply.body = json.dumps(content)
         await self.send(reply)
+
+    async def charge_allowed(self):
+        self.set("in_station_place", None)  # new
+        await self.agent.begin_charging()
 
     async def run(self):
         raise NotImplementedError
