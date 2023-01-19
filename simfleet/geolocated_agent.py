@@ -15,7 +15,6 @@ class GeoLocatedAgent(SimfleetAgent):
         self.route_host = None
         self.set("current_pos", None)
 
-        self.dest = None
         self.icon = None
     
     def set_icon(self, icon):
@@ -57,22 +56,6 @@ class GeoLocatedAgent(SimfleetAgent):
         """
         return self.get("current_pos")
 
-    def set_target_position(self, coords=None):
-        """
-        Sets the target position of the Agent (i.e. its destination).
-        If no position is provided the destination is setted to a random position.
-
-        Args:
-            coords (list): a list coordinates (longitude and latitude)
-        """
-        if coords:
-            self.dest = coords
-        else:
-            self.dest = random_position()
-        logger.debug(
-            "Agent {} target position is {}".format(self.agent_id, self.dest)
-        )
-
     def to_json(self):
         """
         Returns a JSON with the relevant data of this type of agent
@@ -82,9 +65,6 @@ class GeoLocatedAgent(SimfleetAgent):
             "position": [
                 float(coord) for coord in self.get("current_pos")
             ],
-            "dest": [float(coord) for coord in self.dest]
-            if self.dest
-            else None,
             "icon": self.icon
         })
         return data

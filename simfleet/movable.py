@@ -1,6 +1,6 @@
 
 from asyncio.log import logger
-from simfleet.helpers import AlreadyInDestination, PathRequestException, distance_in_meters, kmh_to_ms
+from simfleet.helpers import AlreadyInDestination, PathRequestException, distance_in_meters, kmh_to_ms, random_position
 from spade.behaviour import PeriodicBehaviour
 from simfleet.utils import chunk_path, request_path
 
@@ -13,6 +13,11 @@ class MovableMixin():
         self.chunked_path = None
         self.animation_speed = ONESECOND_IN_MS
         self.set("speed_in_kmh", 3000)
+        self.dest = None
+        # self.set(dest, {})?
+        # {
+        #   destino: [cliente, AccionARealizar]
+        # }
         
         self.distances = []
         self.durations = []
@@ -54,6 +59,31 @@ class MovableMixin():
         self.durations.append(duration)
         behav = MovingBehaviour(period=1)
         self.add_behaviour(behav)
+
+    def is_in_destination(self):
+        """
+        Checks if the agent has arrived to its destination.
+
+        Returns:
+            bool: whether the agent is at its destination or not
+        """
+        return self.dest == self.get_position()
+
+    def set_target_position(self, coords=None):
+        """
+        Sets the target position of the Agent (i.e. its destination).
+        If no position is provided the destination is setted to a random position.
+
+        Args:
+            coords (list): a list coordinates (longitude and latitude)
+        """
+        if coords:
+            self.dest = coords
+        else:
+            self.dest = random_position()
+        logger.debug(
+            "Agent {} target position is {}".format(self.agent_id, self.dest)
+        )
 
     async def step(self):
         """
@@ -99,6 +129,18 @@ class MovableMixin():
         """
         self.set("path", None)
         self.chunked_path = None
+
+    def to_json(self):
+        """
+        Returns a JSON with the relevant data of this type of agent
+        """
+        data = super().to_json()
+        data.update({
+            "dest": [float(coord) for coord in self.dest]
+            if self.dest
+            else None
+        })
+        return data
 
 class MovingBehaviour(PeriodicBehaviour):
     """
