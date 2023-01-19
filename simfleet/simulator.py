@@ -536,8 +536,8 @@ class SimulatorAgent(Agent):
         columns += [
             "Avg Customer Waiting Time",
             "Avg Customer Total Time",
-            "Avg Transport Waiting Time",
-            "Avg Transport Charging Time",
+            # "Avg Transport Waiting Time",
+            # "Avg Transport Charging Time",
             "Avg Distance",
             "Simulation Time",
         ]
@@ -858,18 +858,18 @@ class SimulatorAgent(Agent):
             waiting, total = 0, 0
 
         if len(self.transport_agents) > 0:
-            t_waiting = avg(
-                [
-                    transport.total_waiting_time
-                    for transport in self.transport_agents.values()
-                ]
-            )
-            t_charging = avg(
-                [
-                    transport.total_charging_time
-                    for transport in self.transport_agents.values()
-                ]
-            )
+            # t_waiting = avg(
+            #     [
+            #         transport.total_waiting_time
+            #         for transport in self.transport_agents.values()
+            #     ]
+            # )
+            # t_charging = avg(
+            #     [
+            #         transport.total_charging_time
+            #         for transport in self.transport_agents.values()
+            #     ]
+            # )
             distance = avg(
                 [
                     sum(transport.distances)
@@ -884,8 +884,8 @@ class SimulatorAgent(Agent):
         return {
             "waiting": "{0:.2f}".format(waiting),
             "totaltime": "{0:.2f}".format(total),
-            "t_waiting": "{0:.2f}".format(t_waiting),
-            "t_charging": "{0:.2f}".format(t_charging),
+            # "t_waiting": "{0:.2f}".format(t_waiting),
+            # "t_charging": "{0:.2f}".format(t_charging),
             "distance": "{0:.2f}".format(distance),
             "finished": self.is_simulation_finished(),
             "is_running": self.simulation_running,
@@ -1157,8 +1157,8 @@ class SimulatorAgent(Agent):
                 names,
                 assignments,
                 distances,
-                waiting_in_station_time,
-                charging_time,
+                # waiting_in_station_time,
+                # charging_time,
                 statuses,
             ) = zip(
                 *[
@@ -1166,8 +1166,8 @@ class SimulatorAgent(Agent):
                         t.name,
                         t.num_assignments,
                         "{0:.2f}".format(sum(t.distances)),
-                        "{0:.2f}".format(t.total_waiting_time),
-                        "{0:.2f}".format(t.total_charging_time),
+                        # "{0:.2f}".format(t.total_waiting_time),
+                        # "{0:.2f}".format(t.total_charging_time),
                         status_to_str(t.status),
                     )
                     for t in self.transport_agents.values()
@@ -1304,7 +1304,7 @@ class SimulatorAgent(Agent):
             {
                 "Avg Customer Waiting Time": [stats["waiting"]],
                 "Avg Customer Total Time": [stats["totaltime"]],
-                "Avg Transport Waiting Time": [stats["t_waiting"]],
+                # "Avg Transport Waiting Time": [stats["t_waiting"]],
                 "Avg Transport Charging Time": [stats["t_charging"]],
                 "Avg Distance": [stats["distance"]],
                 "Simulation Finished": [stats["finished"]],
@@ -1427,8 +1427,8 @@ class SimulatorAgent(Agent):
         delayed=False,
     ):
         jid = f"{name}@{self.jid.domain}"
-        agent = TransportAgent(jid, password)
-        # agent = NewTransportAgent(jid, password)
+        # agent = TransportAgent(jid, password)
+        agent = NewTransportAgent(jid, password)
         logger.debug("Creating Transport {}".format(jid))
         agent.set_id(name)
         agent.set_directory(self.get_directory().jid)

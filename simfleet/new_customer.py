@@ -42,7 +42,7 @@ class NewCustomerAgent(GeoLocatedAgent):
         self.target = None
 
         # esto igual hay que pasarlo al setup
-        self.fleet_type = "taxi"
+        self.fleet_type = None
 
     def run_strategy(self):
         """import json
