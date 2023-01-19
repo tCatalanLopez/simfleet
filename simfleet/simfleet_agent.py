@@ -99,10 +99,6 @@ class SimfleetAgent(Agent):
         else:
             return None
     
-    #recordatorio de implementar
-    def setup():
-        raise NotImplementedError
-
     def to_json(self):
         """
         Returns a JSON with the relevant data of this type of agent
