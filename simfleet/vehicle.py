@@ -136,26 +136,6 @@ class VehicleAgent(MovableMixin, GeoLocatedAgent):
         #         if performative == ACCEPT_PERFORMATIVE:
         #             await self.begin_charging()
 
-    # se usa el metodo de geolocated, la funcion original de transport se divide entre vehicle y transport
-    async def set_position(self, coords=None):
-        """
-        Sets the position of the transport. If no position is provided it is located in a random position.
-
-        Args:
-            coords (list): a list coordinates (longitude and latitude)
-        """
-        super().set_position(coords)
-        if self.is_in_destination():
-            logger.info(
-                "Transport {} has arrived to destination. Status: {}".format(
-                    self.agent_id, self.status
-                )
-            )
-            if self.status == TRANSPORT_MOVING_TO_STATION:
-                await self.arrived_to_station()
-            else:
-                await self.arrived_to_destination()
-
     def set_speed(self, speed_in_kmh):
         """
         Sets the speed of the transport.

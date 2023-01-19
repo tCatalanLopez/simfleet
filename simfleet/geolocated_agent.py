@@ -40,9 +40,6 @@ class GeoLocatedAgent(SimfleetAgent):
             self.set("current_pos", coords)
         else:
             self.set("current_pos", random_position())
-        logger.debug(
-            "Agent {} position is {}".format(self.agent_id, self.get("current_pos"))
-        )
 
     def set_initial_position(self, coords):
         self.set("current_pos", coords)

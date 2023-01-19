@@ -144,6 +144,7 @@ class NewTransportAgent(VehicleAgent):
         or drops it and goes to WAITING status again.
         """
         super().arrived_to_destination()
+
         if (
             not self.is_customer_in_transport()
         ):  # self.status == TRANSPORT_MOVING_TO_CUSTOMER:
@@ -154,6 +155,9 @@ class NewTransportAgent(VehicleAgent):
                 await self.cancel_customer()
                 self.status = TRANSPORT_WAITING
             except AlreadyInDestination:
+                logger.info(
+                    "BUCLE????"
+                    )
                 await self.drop_customer()
             else:
                 await self.inform_customer(TRANSPORT_IN_CUSTOMER_PLACE)
@@ -164,6 +168,11 @@ class NewTransportAgent(VehicleAgent):
                     )
                 )
         else:  # elif self.status == TRANSPORT_MOVING_TO_DESTINATION:
+            logger.error(
+                    "Transport {} is still moving.".format(
+                        self.agent_id
+                    )
+                )
             await self.drop_customer()
 
     async def drop_customer(self):
@@ -248,14 +257,20 @@ class NewTransportAgent(VehicleAgent):
         """
         
         super().set_position(coords)
-
-        # esto en principio deberia irse si lo vamos a dejar como self.current_pos
         self.set("current_pos", coords) 
-        
+
         if self.status == TRANSPORT_MOVING_TO_DESTINATION:
             await self.inform_customer(
                 CUSTOMER_LOCATION, {"location": self.get("current_pos")} 
             )
+        if self.is_in_destination():
+            logger.info(
+                "Transport {} has arrived to destination. Status: {}".format(
+                    self.agent_id, self.status
+                )
+            )
+            await self.arrived_to_destination()
+            
 
     def to_json(self):
         """
@@ -401,6 +416,11 @@ class TransportStrategyBehaviour(StrategyBehaviour):
         try:
             await self.agent.move_to(self.agent.current_customer_orig)
         except AlreadyInDestination:
+            logger.error(
+                "Transport {} is already in destination".format(
+                    self.agent.name
+                )
+            )
             await self.agent.arrived_to_destination()
         except PathRequestException as e:
             logger.error(

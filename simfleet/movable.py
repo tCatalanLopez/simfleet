@@ -81,9 +81,9 @@ class MovableMixin():
             self.dest = coords
         else:
             self.dest = random_position()
-        logger.debug(
-            "Agent {} target position is {}".format(self.agent_id, self.dest)
-        )
+        # logger.debug(
+        #     "Agent {} target position is {}".format(self.agent_id, self.dest)
+        # )
 
     async def step(self):
         """
