@@ -100,20 +100,6 @@ class VehicleAgent(MovableMixin, GeoLocatedAgent):
             self.add_behaviour(self.strategy(), template1 | template2)
             self.running_strategy = True
 
-    def set_fleetmanager(self, fleetmanager_id):
-        """
-        Sets the fleetmanager JID address
-        Args:
-            fleetmanager_id (str): the fleetmanager jid
-
-        """
-        logger.info(
-            "Setting fleet {} for agent {}".format(
-                fleetmanager_id.split("@")[0], self.name
-            )
-        )
-        self.fleetmanager_id = fleetmanager_id
-
     def set_registration(self, status, content=None):
         """
         Sets the status of registration
@@ -204,9 +190,6 @@ class VehicleAgent(MovableMixin, GeoLocatedAgent):
                 }
         """
         data = super().to_json()
-        data.update({
-            "fleet_manager": self.fleetmanager_id
-        })
         return data
 
     
