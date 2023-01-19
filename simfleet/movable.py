@@ -121,7 +121,7 @@ class MovableMixin():
         """
         return await request_path(self, origin, destination, self.route_host)
 
-    async def arrived_to_destination(self):
+    def arrived_to_destination(self):
         """
         Informs that the transport has arrived to its destination.
         It recomputes the new destination and path if picking up a customer

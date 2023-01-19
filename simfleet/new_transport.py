@@ -155,9 +155,6 @@ class NewTransportAgent(VehicleAgent):
                 await self.cancel_customer()
                 self.status = TRANSPORT_WAITING
             except AlreadyInDestination:
-                logger.info(
-                    "BUCLE????"
-                    )
                 await self.drop_customer()
             else:
                 await self.inform_customer(TRANSPORT_IN_CUSTOMER_PLACE)
