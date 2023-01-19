@@ -56,6 +56,7 @@ class NewTransportAgent(VehicleAgent):
         self.current_customer_dest = None
         self.set("customer_in_transport", None)
         self.num_assignments = 0
+        self.fleetmanager_id = None
 
         self.request = "station"
         self.stations = None

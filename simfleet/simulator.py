@@ -283,7 +283,6 @@ class SimulatorAgent(Agent):
             )
 
             position = vehicle["position"]
-            fleetmanager = vehicle["fleet"]
             fleet_type = vehicle["fleet_type"]
             target = vehicle["destination"]
             speed = vehicle.get("speed")
@@ -302,7 +301,6 @@ class SimulatorAgent(Agent):
                 speed=speed,
                 fleet_type=fleet_type,
                 target=target,
-                fleetmanager=fleetmanager,
                 strategy=strategy,
                 delayed=delayed,
             )
@@ -1178,8 +1176,8 @@ class SimulatorAgent(Agent):
                 names,
                 assignments,
                 distances,
-                waiting_in_station_time,
-                charging_time,
+                # waiting_in_station_time,
+                # charging_time,
                 statuses,
             ) = ([], [], [], [], [])
         df = pd.DataFrame.from_dict(
@@ -1187,8 +1185,8 @@ class SimulatorAgent(Agent):
                 "name": names,
                 "assignments": assignments,
                 "distance": distances,
-                "waiting_in_station_time": waiting_in_station_time,
-                "charging_time": charging_time,
+                # "waiting_in_station_time": waiting_in_station_time,
+                # "charging_time": charging_time,
                 "status": statuses,
             }
         )
@@ -1279,8 +1277,8 @@ class SimulatorAgent(Agent):
                 "name",
                 "assignments",
                 "distance",
-                "waiting_in_station_time",
-                "charging_time",
+                # "waiting_in_station_time",
+                # "charging_time",
                 "status",
             ]
         ]
@@ -1305,7 +1303,7 @@ class SimulatorAgent(Agent):
                 "Avg Customer Waiting Time": [stats["waiting"]],
                 "Avg Customer Total Time": [stats["totaltime"]],
                 # "Avg Transport Waiting Time": [stats["t_waiting"]],
-                "Avg Transport Charging Time": [stats["t_charging"]],
+                # "Avg Transport Charging Time": [stats["t_charging"]],
                 "Avg Distance": [stats["distance"]],
                 "Simulation Finished": [stats["finished"]],
                 "Simulation Time": [self.get_simulation_time()],
@@ -1314,8 +1312,8 @@ class SimulatorAgent(Agent):
         columns = [
             "Avg Customer Waiting Time",
             "Avg Customer Total Time",
-            "Avg Transport Waiting Time",
-            "Avg Transport Charging Time",
+            # "Avg Transport Waiting Time",
+            # "Avg Transport Charging Time",
             "Avg Distance",
             "Simulation Time",
             "Simulation Finished",
@@ -1345,8 +1343,8 @@ class SimulatorAgent(Agent):
         self, name, password, fleet_type, strategy=None, icon=None
     ):
         jid = f"{name}@{self.jid.domain}"
-        agent = FleetManagerAgent(jid, password)
-        # agent = NewFleetManagerAgent(jid, password)
+        # agent = FleetManagerAgent(jid, password)
+        agent = NewFleetManagerAgent(jid, password)
         logger.debug("Creating FleetManager {}".format(jid))
         agent.set_id(name)
         agent.set_directory(self.get_directory().jid)
@@ -1374,7 +1372,6 @@ class SimulatorAgent(Agent):
         name,
         password,
         fleet_type,
-        fleetmanager,
         position,
         strategy=None,
         speed=None,
@@ -1389,7 +1386,6 @@ class SimulatorAgent(Agent):
         agent.set_directory(self.get_directory().jid)
         logger.debug("Assigning type {} to transport {}".format(fleet_type, name))
         agent.set_fleet_type(fleet_type)
-        agent.set_fleetmanager(fleetmanager)
         agent.set_route_host(self.route_host)
         agent.set_directory(self.get_directory().jid)
         agent.set_target_position(target)
@@ -1427,8 +1423,8 @@ class SimulatorAgent(Agent):
         delayed=False,
     ):
         jid = f"{name}@{self.jid.domain}"
-        # agent = TransportAgent(jid, password)
-        agent = NewTransportAgent(jid, password)
+        agent = TransportAgent(jid, password)
+        # agent = NewTransportAgent(jid, password)
         logger.debug("Creating Transport {}".format(jid))
         agent.set_id(name)
         agent.set_directory(self.get_directory().jid)
