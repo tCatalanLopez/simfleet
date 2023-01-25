@@ -217,30 +217,3 @@ class AlwaysMoveStrategyBehaviour(VehicleStrategyBehaviour):
     async def on_start(self):
         # esto es la base, el metodo go_to() debería activarlo para que al recibir un destino, se ponga en marcha, pero si ya tiene un destino, empieza a moverse
         await self.agent.move_to(self.agent.dest)
-
-    #     msg = await self.receive(timeout=5)
-    #     if not msg:
-    #         return
-    #     logger.debug("Transport received message: {}".format(msg))
-    #     try:
-    #         content = json.loads(msg.body)
-    #     except TypeError:
-    #         content = {}
-
-    #     performative = msg.get_metadata("performative")
-    #     protocol = msg.get_metadata("protocol")
-
-    #     if protocol == REQUEST_PROTOCOL:
-    #         if performative == REQUEST_PERFORMATIVE:
-    #             try:
-    #                 self.agent.status = VEHICLE_MOVING_TO_DESTINATION
-    #                 await self.go_to(content["dest"])
-
-    #             except PathRequestException:
-    #                 logger.error(
-    #                     "Transport {} could not get a path to position {}. Cancelling...".format(
-    #                         self.agent.name, content["dest"]
-    #                     )
-    #                 )
-    #                 self.agent.status = VEHICLE_WAITING
-        
