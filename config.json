@@ -38,14 +38,6 @@
         },
         {
             "speed": 2000,
-            "fleet": "fleetm1@gtirouter.dsic.upv.es",
-            "fleet_type": "drone",
-            "position": [40.428655600133546,-3.6993885040283203],
-            "password": "secret",
-            "name": "drone2"
-        },
-        {
-            "speed": 2000,
             "fleet": "fleetm2@gtirouter.dsic.upv.es",
             "fleet_type": "drone",
             "position": [40.446424515534666, -3.6612796783447266],

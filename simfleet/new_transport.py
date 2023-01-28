@@ -52,15 +52,22 @@ class NewTransportAgent(VehicleAgent):
         super().__init__(agentjid, password)
         self.status = TRANSPORT_WAITING
         self.set("current_customer", None)
+
+        self.max_capacity = 1
+        self.set("customer", [])
+
+        # estos 3 en principio se irian
         self.current_customer_orig = None
         self.current_customer_dest = None
         self.set("customer_in_transport", None)
+
         self.num_assignments = 0
         self.fleetmanager_id = None
 
         self.request = "station"
         self.stations = None
 
+        # todo esto esta en strategies_fsm
         # Customer in transport event
         self.customer_in_transport_event = asyncio.Event(loop=self.loop)
 
@@ -150,7 +157,8 @@ class NewTransportAgent(VehicleAgent):
         ):  # self.status == TRANSPORT_MOVING_TO_CUSTOMER:
             try:
                 self.set("customer_in_transport", self.get("current_customer"))
-                await self.move_to(self.current_customer_dest)
+                self.add_target_position(self.current_customer_dest)
+                await self.move_to_next_destination()
             except PathRequestException:
                 await self.cancel_customer()
                 self.status = TRANSPORT_WAITING
@@ -408,10 +416,18 @@ class TransportStrategyBehaviour(StrategyBehaviour):
         self.set("current_customer", customer_id)
         self.agent.current_customer_orig = origin
         self.agent.current_customer_dest = dest
+        
         await self.send(reply)
         self.agent.num_assignments += 1
+        
         try:
-            await self.agent.move_to(self.agent.current_customer_orig)
+            self.agent.add_target_position(self.agent.current_customer_orig)
+            logger.info(
+            "Transport {} has {} destinations".format(
+                    self.agent.name, self.agent.get("destinations")
+                )
+            )
+            await self.agent.move_to_next_destination()
         except AlreadyInDestination:
             logger.error(
                 "Transport {} is already in destination".format(
@@ -470,10 +486,6 @@ class TransportStrategyBehaviour(StrategyBehaviour):
         reply.set_metadata("performative", CANCEL_PERFORMATIVE)
         reply.body = json.dumps(content)
         await self.send(reply)
-
-    async def charge_allowed(self):
-        self.set("in_station_place", None)  # new
-        await self.agent.begin_charging()
 
     async def run(self):
         raise NotImplementedError
