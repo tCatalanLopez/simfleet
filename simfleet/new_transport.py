@@ -54,7 +54,18 @@ class NewTransportAgent(VehicleAgent):
         self.set("current_customer", None)
 
         self.max_capacity = 1
-        self.set("customer", [])
+        # self.set("customers", {})
+        # customers:
+        # {
+        #   customer1:{
+        #       inside: True/False,
+        #       destination(s): [x, y] / [[x1,y1], [x2,y2], ... , [xn,yn]]
+        #   }, 
+        #   ..., 
+        #   customer_n:{...}
+        # }
+
+        # cuando llegue a un destino, comprueba que cliente tiene, y le manda un mensaje (subo/bajo del vehiculo, ok, etc)
 
         # estos 3 en principio se irian
         self.current_customer_orig = None
