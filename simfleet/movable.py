@@ -160,6 +160,13 @@ class MovableMixin():
 
         self.set("destinations", prev_destinations)
 
+    def order_list(self, order=None):
+        if order is not None:
+            prev_destinations = self.get("destinations")
+            # modificar prev_destinations segun el orden
+            self.set("destinations",prev_destinations)
+            
+
     async def step(self):
         """
         Advances one step in the simulation
