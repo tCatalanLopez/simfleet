@@ -157,7 +157,7 @@ class NewTransportAgent(VehicleAgent):
         ):  # self.status == TRANSPORT_MOVING_TO_CUSTOMER:
             try:
                 self.set("customer_in_transport", self.get("current_customer"))
-                self.add_target_position(self.current_customer_dest)
+                # self.add_target_position(self.current_customer_dest)
                 await self.move_to_next_destination()
             except PathRequestException:
                 await self.cancel_customer()
@@ -422,7 +422,8 @@ class TransportStrategyBehaviour(StrategyBehaviour):
         
         try:
             self.agent.add_target_position(self.agent.current_customer_orig)
-            logger.info(
+            self.agent.add_target_position(self.agent.current_customer_dest)
+            logger.success(
             "Transport {} has {} destinations".format(
                     self.agent.name, self.agent.get("destinations")
                 )

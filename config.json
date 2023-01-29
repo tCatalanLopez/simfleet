@@ -35,30 +35,6 @@
             "position": [40.41192762537371, -3.7105464935302734],
             "password": "secret",
             "name": "drone1"
-        },
-        {
-            "speed": 2000,
-            "fleet": "fleetm2@gtirouter.dsic.upv.es",
-            "fleet_type": "drone",
-            "position": [40.446424515534666, -3.6612796783447266],
-            "password": "secret",
-            "name": "drone3"
-        },
-        {
-            "speed": 2000,
-            "fleet": "fleetm3@gtirouter.dsic.upv.es",
-            "fleet_type": "food_delivery",
-            "position": [40.44635919724081,-3.69140625],
-            "password": "secret",
-            "name": "bike1"
-        },
-        {
-            "speed": 2000,
-            "fleet": "fleetm3@gtirouter.dsic.upv.es",
-            "fleet_type": "food_delivery",
-            "position": [40.42035747630869,-3.665142059326172],
-            "password": "secret",
-            "name": "bike2"
         }
     ],
     "customers": [
@@ -88,14 +64,21 @@
             "position": [40.440088345478614,-3.680849075317383],
             "password": "secret",
             "name": "f1",
-            "fleet_type": "food_delivery"
+            "fleet_type": "drone"
         },
         {
             "destination": [40.458572614225545,-3.680419921875],
             "position": [40.409770982232956,-3.6928653717041016],
             "password": "secret",
             "name": "f2",
-            "fleet_type": "food_delivery"
+            "fleet_type": "drone"
+        },
+        {
+            "destination": [40.43002763221108,-3.6797332763671875],
+            "position": [40.446163241978304,-3.7075424194335938],
+            "password": "secret",
+            "name": "f2",
+            "fleet_type": "drone"
         }
     ],
     "simulation_name": "Example Config",
