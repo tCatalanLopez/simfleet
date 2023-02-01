@@ -22,7 +22,12 @@
             "fleet": "testVehicle@gtirouter.dsic.upv.es",
             "fleet_type": "drone",
             "position": [40.41192762537371, -3.7105464935302734],
-            "destination": [40.446163241978304,-3.7075424194335938],
+            "destinations": [
+                [40.446163241978304,-3.7075424194335938],
+                [40.41192762537371, -3.7105464935302734],
+                [40.43087697137461,-3.716297149658203],
+                [40.45759301026131,-3.664026260375976]
+            ],
             "password": "secret",
             "name": "testVehicle"
         }
@@ -43,41 +48,6 @@
             "position": [40.45171508652634,-3.677501678466797],
             "password": "secret",
             "name": "c1",
-            "fleet_type": "drone"
-        },
-        {
-            "destination": [40.4068299938421,-3.670291900634765],
-            "position": [40.43087697137461,-3.716297149658203],
-            "password": "secret",
-            "name": "c2",
-            "fleet_type": "drone"
-        },
-        {
-            "destination": [40.43002763221108,-3.6797332763671875],
-            "position": [40.45759301026131,-3.664026260375976],
-            "password": "secret",
-            "name": "c3",
-            "fleet_type": "drone"
-        },
-        {
-            "destination": [40.45785423938172,-3.711318969726563],
-            "position": [40.440088345478614,-3.680849075317383],
-            "password": "secret",
-            "name": "f1",
-            "fleet_type": "drone"
-        },
-        {
-            "destination": [40.458572614225545,-3.680419921875],
-            "position": [40.409770982232956,-3.6928653717041016],
-            "password": "secret",
-            "name": "f2",
-            "fleet_type": "drone"
-        },
-        {
-            "destination": [40.43002763221108,-3.6797332763671875],
-            "position": [40.446163241978304,-3.7075424194335938],
-            "password": "secret",
-            "name": "f2",
             "fleet_type": "drone"
         }
     ],
