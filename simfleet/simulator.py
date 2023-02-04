@@ -284,7 +284,8 @@ class SimulatorAgent(Agent):
 
             position = vehicle["position"]
             fleet_type = vehicle["fleet_type"]
-            target = vehicle["destination"]
+            destinations = vehicle["destinations"]
+            
             speed = vehicle.get("speed")
             strategy = vehicle.get("strategy")
             icon = vehicle.get("icon")
@@ -300,7 +301,7 @@ class SimulatorAgent(Agent):
                 position=position,
                 speed=speed,
                 fleet_type=fleet_type,
-                target=target,
+                destinations=destinations,
                 strategy=strategy,
                 delayed=delayed,
             )
@@ -1376,7 +1377,7 @@ class SimulatorAgent(Agent):
         strategy=None,
         speed=None,
         delayed=False,
-        target=None
+        destinations=None
     ):
         jid = f"{name}@{self.jid.domain}"
         # agent = TransportAgent(jid, password)
@@ -1388,13 +1389,14 @@ class SimulatorAgent(Agent):
         agent.set_fleet_type(fleet_type)
         agent.set_route_host(self.route_host)
         agent.set_directory(self.get_directory().jid)
-        agent.set_target_position(target)
+        agent.set_destinations(destinations)
         
         agent.set_initial_position(position)
 
         if speed:
             agent.set_speed(speed)
 
+        logger.debug("Sent strategy = {}".format(strategy))
         if strategy:
             agent.strategy = load_class(strategy)
         else:

@@ -6,9 +6,11 @@ from collections import defaultdict
 
 from loguru import logger
 from spade.agent import Agent
-from spade.behaviour import PeriodicBehaviour, CyclicBehaviour
+from spade.behaviour import PeriodicBehaviour, CyclicBehaviour, State, FSMBehaviour
 from spade.message import Message
 from spade.template import Template
+
+# from simfleet.strategies_fsm import TD, MovementStep, SelectDestination, UpdateCustomerInfo, VehicleFSM
 
 from .movable import MovableMixin, MovingBehaviour
 from .geolocated_agent import GeoLocatedAgent
@@ -33,6 +35,10 @@ from .protocol import (
     QUERY_PROTOCOL,
 )
 from .utils import (
+    STATE_MOVEMENT_STEP,
+    STATE_SELECT_DESTINATION,
+    STATE_TD,
+    STATE_UPDATE_CUSTOMER_INFO,
     TRANSPORT_WAITING,
     TRANSPORT_MOVING_TO_CUSTOMER,
     TRANSPORT_IN_CUSTOMER_PLACE,
@@ -65,26 +71,9 @@ class VehicleAgent(MovableMixin, GeoLocatedAgent):
         self.registration = None
 
     async def setup(self):
-        try:
-            template = Template()
-            template.set_metadata("protocol", REGISTER_PROTOCOL)
-            register_behaviour = RegistrationBehaviour()
-            self.add_behaviour(register_behaviour, template)
-            while not self.has_behaviour(register_behaviour):
-                logger.warning(
-                    "Vehicle {} could not create RegisterBehaviour. Retrying...".format(
-                        self.agent_id
-                    )
-                )
-                self.add_behaviour(register_behaviour, template)
-            self.ready = True
-        except Exception as e:
-            logger.error(
-                "EXCEPTION creating RegisterBehaviour in Vehicle {}: {}".format(
-                    self.agent_id, e
-                )
-            )
-
+        logger.info("Vehicle agent {} running".format(self.name))
+        self.ready = True
+        
     def run_strategy(self):
         """
         Sets the strategy for the transport agent.
@@ -93,12 +82,23 @@ class VehicleAgent(MovableMixin, GeoLocatedAgent):
             strategy_class (``TransportStrategyBehaviour``): The class to be used. Must inherit from ``TransportStrategyBehaviour``
         """
         if not self.running_strategy:
-            template1 = Template()
-            template1.set_metadata("protocol", REQUEST_PROTOCOL)
-            template2 = Template()
-            template2.set_metadata("protocol", QUERY_PROTOCOL)
-            self.add_behaviour(self.strategy(), template1 | template2)
+            fsm = VehicleFSM()
+            fsm.add_state(name=STATE_SELECT_DESTINATION, state=SelectDestination(), initial=True)
+            fsm.add_state(name=STATE_MOVEMENT_STEP, state=MovementStep())
+            fsm.add_state(name=STATE_UPDATE_CUSTOMER_INFO, state=UpdateCustomerInfo())
+            fsm.add_state(name=STATE_TD, state=TD())
+            fsm.add_transition(source=STATE_SELECT_DESTINATION, dest=STATE_MOVEMENT_STEP)
+            fsm.add_transition(source=STATE_MOVEMENT_STEP, dest=STATE_UPDATE_CUSTOMER_INFO)
+            fsm.add_transition(source=STATE_UPDATE_CUSTOMER_INFO, dest=STATE_TD)
+            fsm.add_transition(source=STATE_TD, dest=STATE_MOVEMENT_STEP)
+            fsm.add_transition(source=STATE_TD, dest=STATE_SELECT_DESTINATION)
+            fsm.add_transition(source=STATE_SELECT_DESTINATION, dest=STATE_SELECT_DESTINATION)
+            fsm.add_transition(source=STATE_MOVEMENT_STEP, dest=STATE_MOVEMENT_STEP)
+            self.add_behaviour(fsm)
             self.running_strategy = True
+            
+            
+            
 
     def set_registration(self, status, content=None):
         """
@@ -111,30 +111,6 @@ class VehicleAgent(MovableMixin, GeoLocatedAgent):
             self.icon = content["icon"] if self.icon is None else self.icon
             self.fleet_type = content["fleet_type"]
         self.registration = status
-
-    async def request_access_station(self):
-
-        reply = Message()
-        reply.to = self.get("current_station")
-        reply.set_metadata("protocol", REQUEST_PROTOCOL)
-        reply.set_metadata("performative", ACCEPT_PERFORMATIVE)
-        logger.debug(
-            "{} requesting access to {}".format(
-                self.name, self.get("current_station"), reply.body
-            )
-        )
-        await self.send(reply)
-
-        # time waiting in station queue update
-        self.waiting_in_queue_time = time.time()
-
-        # WAIT FOR EXPLICIT CONFIRMATION THAT IT CAN CHARGE
-        # while True:
-        #     msg = await self.receive(timeout=5)
-        #     if msg:
-        #         performative = msg.get_metadata("performative")
-        #         if performative == ACCEPT_PERFORMATIVE:
-        #             await self.begin_charging()
 
     def set_speed(self, speed_in_kmh):
         """
@@ -172,108 +148,60 @@ class VehicleAgent(MovableMixin, GeoLocatedAgent):
         data = super().to_json()
         return data
 
+class VehicleFSM(FSMBehaviour):
+    async def on_start(self):
+        logger.info("-----------------vehicle fsm started-----------------")
+
+    async def on_end(self):
+        await self.agent.stop()
     
 
-class RegistrationBehaviour(CyclicBehaviour):
+class SelectDestination( State):
     async def on_start(self):
-        logger.debug("Strategy {} started in transport".format(type(self).__name__))
+        logger.info("-----------------selectDestination-----------------")
 
-    async def send_registration(self):
-        """
-        Send a ``spade.message.Message`` with a proposal to manager to register.
-        """
-        logger.debug(
-            "Transport {} sent proposal to register to manager {}".format(
-                self.agent.name, self.agent.fleetmanager_id
-            )
-        )
-        content = {
-            "name": self.agent.name,
-            "jid": str(self.agent.jid),
-            "fleet_type": self.agent.fleet_type,
-        }
-        msg = Message()
-        msg.to = str(self.agent.fleetmanager_id)
-        msg.set_metadata("protocol", REGISTER_PROTOCOL)
-        msg.set_metadata("performative", REQUEST_PERFORMATIVE)
-        msg.body = json.dumps(content)
-        await self.send(msg)
+    async def run(self):
+        if self.agent.get("destinations") != []:
+            self.set_next_state(STATE_MOVEMENT_STEP)
+        else: self.set_next_state(STATE_SELECT_DESTINATION)
+
+class MovementStep( State):
+    async def on_start(self):
+        logger.info("-----------------MovementStep-----------------")
 
     async def run(self):
         try:
-            if not self.agent.registration:
-                await self.send_registration()
-            msg = await self.receive(timeout=10)
-            if msg:
-                performative = msg.get_metadata("performative")
-                if performative == ACCEPT_PERFORMATIVE:
-                    content = json.loads(msg.body)
-                    self.agent.set_registration(True, content)
-                    logger.info(
-                        "[{}] Registration in the fleet manager accepted: {}.".format(
-                            self.agent.name, self.agent.fleetmanager_id
-                        )
-                    )
-                    self.kill(exit_code="Fleet Registration Accepted")
-                elif performative == REFUSE_PERFORMATIVE:
-                    logger.warning(
-                        "Registration in the fleet manager was rejected (check fleet type)."
-                    )
-                    self.kill(exit_code="Fleet Registration Rejected")
-        except CancelledError:
-            logger.debug("Cancelling async tasks...")
-        except Exception as e:
-            logger.error(
-                "EXCEPTION in RegisterBehaviour of Transport {}: {}".format(
-                    self.agent.name, e
-                )
-            )
-
-class VehicleStrategyBehaviour(StrategyBehaviour):
-    """
-    Class from which to inherit to create a vehicle strategy.
-    You must overload the ```run`` coroutine
-
-    Helper functions:
-        * ``pick_up_customer``
-        * ``send_proposal``
-        * ``cancel_proposal``
-    """
-
-    async def on_start(self):
-        logger.debug(
-            "Strategy {} started in vehicle {}".format(
-                type(self).__name__, self.agent.name
-            )
-        )
-        # self.agent.total_waiting_time = 0.0
-
-    async def go_to(self, dest):
-        """
-        Starts a TRAVEL_PROTOCOL to pick up a customer and get him to his destination.
-        It automatically launches all the travelling process until the customer is
-        delivered. This travelling process includes to update the transport coordinates as it
-        moves along the path at the specified speed.
-
-        Args:
-            dest (list): the coordinates of the target destination of the customer
-        """
-        
-        logger.info(
-            "Transport {} on route to position {}".format(self.agent.name, dest)
-        )
-        try:
-            await self.agent.move_to(dest)
+            await self.agent.move_to_next_destination()
+            self.set_next_state(STATE_MOVEMENT_STEP)
         except AlreadyInDestination:
-            await self.agent.arrived_to_destination()
-        except PathRequestException as e:
-            logger.error(
-                "Raising PathRequestException in go_to for {}".format(
+            logger.success(
+                "Vehicle {} is already in destination".format(
                     self.agent.name
                 )
             )
+            self.agent.arrived_to_destination()
+            self.set_next_state(STATE_UPDATE_CUSTOMER_INFO)
+        except PathRequestException as e:
+            logger.error(
+                "Raising PathRequestException in pick_up_customer for {}".format(
+                    self.agent.name
+                )
+            )
+            self.set_next_state(STATE_UPDATE_CUSTOMER_INFO)
             raise e
 
-    async def run(self):
-        raise NotImplementedError
+class UpdateCustomerInfo( State):
+    async def on_start(self):
+        logger.info("-----------------UpdateCustomerInfo-----------------")
         
+    async def run(self):
+        self.set_next_state(STATE_TD)
+
+class TD(State):
+    async def on_start(self):
+        logger.info("-----------------TD-----------------")
+        
+    async def run(self):
+        if self.agent.get("destinations") != []:
+            self.set_next_state(STATE_MOVEMENT_STEP)
+        else: self.set_next_state(STATE_SELECT_DESTINATION)

@@ -13,7 +13,7 @@ class MovableMixin():
         self.chunked_path = None
         self.animation_speed = ONESECOND_IN_MS
         self.set("speed_in_kmh", 3000)
-        self.dest = None
+        # self.dest = None
         
         self.set("destinations", [])
         # self.set("destinations", []) por orden a realizar, el agente puede ordenarla como quiera, pero el move_to va a la 1a (si hay)
@@ -26,43 +26,45 @@ class MovableMixin():
 
     # con el sistema de cola no haria falta un destino, solo tener en cuenta mandar una excepción tipo "Agent has no destinations"
     # dest no es importante, porque al moverse comprueba el siguiente punto en el path
-    async def move_to(self, dest):
-        """
-        Moves the transport to a new destination.
+    # async def move_to(self, dest):
+    #     """
+    #     Moves the transport to a new destination.
 
-        Args:
-            dest (list): the coordinates of the new destination (in lon, lat format)
+    #     Args:
+    #         dest (list): the coordinates of the new destination (in lon, lat format)
 
-        Raises:
-             AlreadyInDestination: if the transport is already in the destination coordinates.
-        """
-        if self.get("current_pos") == dest:
-            raise AlreadyInDestination
-        counter = 5
-        path = None
-        distance, duration = 0, 0
-        while counter > 0 and path is None:
-            logger.debug(
-                "Requesting path from {} to {}".format(self.get("current_pos"), dest)
-            )
-            path, distance, duration = await self.request_path(
-                self.get("current_pos"), dest
-            )
-            counter -= 1
-        if path is None:
-            raise PathRequestException("Error requesting route.")
+    #     Raises:
+    #          AlreadyInDestination: if the transport is already in the destination coordinates.
+    #     """
+    #     if self.get("current_pos") == dest:
+    #         raise AlreadyInDestination
+    #     counter = 5
+    #     path = None
+    #     distance, duration = 0, 0
+    #     while counter > 0 and path is None:
+    #         logger.debug(
+    #             "Requesting path from {} to {}".format(self.get("current_pos"), dest)
+    #         )
+    #         path, distance, duration = await self.request_path(
+    #             self.get("current_pos"), dest
+    #         )
+    #         counter -= 1
+    #     if path is None:
+    #         raise PathRequestException("Error requesting route.")
 
-        self.set("path", path)
-        try:
-            self.chunked_path = chunk_path(path, self.get("speed_in_kmh"))
-        except Exception as e:
-            logger.error("Exception chunking path {}: {}".format(path, e))
-            raise PathRequestException
-        self.dest = dest
-        self.distances.append(distance)
-        self.durations.append(duration)
-        behav = MovingBehaviour(period=1)
-        self.add_behaviour(behav)
+    #     self.set("path", path)
+    #     try:
+    #         self.chunked_path = chunk_path(path, self.get("speed_in_kmh"))
+    #     except Exception as e:
+    #         logger.error("Exception chunking path {}: {}".format(path, e))
+    #         raise PathRequestException
+    #     self.dest = dest
+    #     self.distances.append(distance)
+    #     self.durations.append(duration)
+    #     behav = MovingBehaviour(period=1)
+    #     self.add_behaviour(behav)
+
+
 
     async def move_to_next_destination(self):
         """
@@ -74,11 +76,7 @@ class MovableMixin():
         Raises:
              AlreadyInDestination: if the transport is already in the destination coordinates.
         """
-        logger.error(
-            "Transport {}  has the following destinations: {} ".format(
-                    self.name, self.get("destinations")
-                )
-            )
+
         if self.get("current_pos") == self.get("destinations")[0]:
             raise AlreadyInDestination
         counter = 5
@@ -86,7 +84,7 @@ class MovableMixin():
         distance, duration = 0, 0
         while counter > 0 and path is None:
             logger.error(
-                "Requesting path from {} to {}".format(self.get("current_pos"), self.get("destinations"))
+                "Requesting path from {} to {}".format(self.get("current_pos"), self.get("destinations")[0])
             )
             path, distance, duration = await self.request_path(
                 self.get("current_pos"), self.get("destinations")[0]
@@ -160,6 +158,17 @@ class MovableMixin():
 
         self.set("destinations", prev_destinations)
 
+    def set_destinations(self, destinations=[]):
+        """
+        Sets the target position of the Agent (i.e. its destination).
+        If no position is provided the destination is setted to a random position.
+
+        Args:
+            coords (list): a list coordinates (longitude and latitude)
+        """
+        if destinations != []:
+            self.set("destinations", destinations)
+
     def order_list(self, order=None):
         if order is not None:
             prev_destinations = self.get("destinations")
@@ -211,6 +220,7 @@ class MovableMixin():
         """
         self.set("path", None)
         self.chunked_path = None
+        logger.debug("Arrived to destinations")
 
         prev_destinations = self.get("destinations")
         prev_destinations.pop(0)

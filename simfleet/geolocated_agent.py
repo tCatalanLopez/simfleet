@@ -41,6 +41,18 @@ class GeoLocatedAgent(SimfleetAgent):
         else:
             self.set("current_pos", random_position())
 
+    async def set_position(self, coords=None):
+        """
+        Sets the position of the Agent. If no position is provided it is located in a random position.
+
+        Args:
+            coords (list): a list coordinates (longitude and latitude)
+        """
+        if coords:
+            self.set("current_pos", coords)
+        else:
+            self.set("current_pos", random_position())
+
     def set_initial_position(self, coords):
         self.set("current_pos", coords)
 

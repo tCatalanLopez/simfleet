@@ -50,7 +50,7 @@ class SimfleetConfig(object):
             "transport_strategy", "simfleet.strategies.AcceptAlwaysStrategyBehaviour"
         )
         self.__config["vehicle_strategy"] = self.__config.get(
-            "vehicle_strategy", "simfleet.strategies.AlwaysMoveStrategyBehaviour"
+            "vehicleFSM", "simfleet.vehicle.VehicleFSM"
         )
         self.__config["customer_strategy"] = self.__config.get(
             "customer_strategy", "simfleet.strategies.AcceptFirstRequestBehaviour"
