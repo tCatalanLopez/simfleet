@@ -161,9 +161,16 @@ class SelectDestination( State):
         logger.info("-----------------selectDestination-----------------")
 
     async def run(self):
+        logger.info("List of destinations of agent {}: {}".format(
+            self.agent.name, self.agent.get("destinations")
+            )
+        )
+        
         if self.agent.get("destinations") != []:
             self.set_next_state(STATE_MOVEMENT_STEP)
-        else: self.set_next_state(STATE_SELECT_DESTINATION)
+        else: 
+            time.sleep(10)
+            self.set_next_state(STATE_SELECT_DESTINATION)
 
 class MovementStep( State):
     async def on_start(self):
@@ -195,6 +202,20 @@ class UpdateCustomerInfo( State):
         logger.info("-----------------UpdateCustomerInfo-----------------")
         
     async def run(self):
+        message_dest = self.agent.get("customers")
+        if(str(self.agent.get_position()) in message_dest): 
+            for customer in message_dest[str(self.agent.get_position())]:
+                reply = Message()
+                reply.to = customer
+                reply.set_metadata("performative", INFORM_PERFORMATIVE)
+                content = {"position":self.agent.get_position()}
+                reply.body = json.dumps(content)
+                await self.send(reply)
+        else:
+            # TODO
+            # si no existe una lista de clientes asociada a un destino, hay que mirarlo se mandaría un mesaje a si mismo
+            
+            pass
         self.set_next_state(STATE_TD)
 
 class TD(State):
@@ -202,6 +223,4 @@ class TD(State):
         logger.info("-----------------TD-----------------")
         
     async def run(self):
-        if self.agent.get("destinations") != []:
-            self.set_next_state(STATE_MOVEMENT_STEP)
-        else: self.set_next_state(STATE_SELECT_DESTINATION)
+        self.set_next_state(STATE_SELECT_DESTINATION)

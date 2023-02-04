@@ -20,51 +20,15 @@ class MovableMixin():
         # destinations=[
         #   [x1,y1],[x1,y1],...,[xn,yn]
         # ] 
+        self.set("customers", {})
+        # customers = {
+        #     [x1,y1]: [customer1, customer2, ..., customern],
+        #     ...,
+        #     [xn,yn]: [customer1, customer2, ..., customern]
+        # }
 
         self.distances = []
         self.durations = []
-
-    # con el sistema de cola no haria falta un destino, solo tener en cuenta mandar una excepción tipo "Agent has no destinations"
-    # dest no es importante, porque al moverse comprueba el siguiente punto en el path
-    # async def move_to(self, dest):
-    #     """
-    #     Moves the transport to a new destination.
-
-    #     Args:
-    #         dest (list): the coordinates of the new destination (in lon, lat format)
-
-    #     Raises:
-    #          AlreadyInDestination: if the transport is already in the destination coordinates.
-    #     """
-    #     if self.get("current_pos") == dest:
-    #         raise AlreadyInDestination
-    #     counter = 5
-    #     path = None
-    #     distance, duration = 0, 0
-    #     while counter > 0 and path is None:
-    #         logger.debug(
-    #             "Requesting path from {} to {}".format(self.get("current_pos"), dest)
-    #         )
-    #         path, distance, duration = await self.request_path(
-    #             self.get("current_pos"), dest
-    #         )
-    #         counter -= 1
-    #     if path is None:
-    #         raise PathRequestException("Error requesting route.")
-
-    #     self.set("path", path)
-    #     try:
-    #         self.chunked_path = chunk_path(path, self.get("speed_in_kmh"))
-    #     except Exception as e:
-    #         logger.error("Exception chunking path {}: {}".format(path, e))
-    #         raise PathRequestException
-    #     self.dest = dest
-    #     self.distances.append(distance)
-    #     self.durations.append(duration)
-    #     behav = MovingBehaviour(period=1)
-    #     self.add_behaviour(behav)
-
-
 
     async def move_to_next_destination(self):
         """
@@ -83,7 +47,7 @@ class MovableMixin():
         path = None
         distance, duration = 0, 0
         while counter > 0 and path is None:
-            logger.error(
+            logger.debug(
                 "Requesting path from {} to {}".format(self.get("current_pos"), self.get("destinations")[0])
             )
             path, distance, duration = await self.request_path(

@@ -425,6 +425,16 @@ class TransportStrategyBehaviour(StrategyBehaviour):
         content = {"status": TRANSPORT_MOVING_TO_CUSTOMER}
         reply.body = json.dumps(content)
         self.set("current_customer", customer_id)
+        prev_customers = self.get("customers")
+
+        # asocia el cliente a su posicion de origen
+        if(str(origin) in prev_customers): prev_customers[str(origin)].append(customer_id)
+        else: prev_customers[origin] = [customer_id]
+
+        # asocia el cliente a su posicion de destino
+        if(str(dest) in prev_customers): prev_customers[str(dest)].append(customer_id)
+        else: prev_customers[dest] = [customer_id]
+
         self.agent.current_customer_orig = origin
         self.agent.current_customer_dest = dest
         
