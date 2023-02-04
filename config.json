@@ -33,23 +33,10 @@
         }
     ],
     "transports": [
-        {
-            "speed": 2000,
-            "fleet": "fleetm1@gtirouter.dsic.upv.es",
-            "fleet_type": "drone",
-            "position": [40.41192762537371, -3.7105464935302734],
-            "password": "secret",
-            "name": "drone1"
-        }
+
     ],
     "customers": [
-        {
-            "destination": [40.446163241978304,-3.7075424194335938],
-            "position": [40.45171508652634,-3.677501678466797],
-            "password": "secret",
-            "name": "c1",
-            "fleet_type": "drone"
-        }
+
     ],
     "simulation_name": "Example Config",
     "max_time": 1000,

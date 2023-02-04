@@ -434,11 +434,6 @@ class TransportStrategyBehaviour(StrategyBehaviour):
         try:
             self.agent.add_target_position(self.agent.current_customer_orig)
             self.agent.add_target_position(self.agent.current_customer_dest)
-            logger.success(
-            "Transport {} has {} destinations".format(
-                    self.agent.name, self.agent.get("destinations")
-                )
-            )
             await self.agent.move_to_next_destination()
         except AlreadyInDestination:
             logger.error(

@@ -4,8 +4,9 @@ from loguru import logger
 from spade.behaviour import State, FSMBehaviour
 
 from simfleet.customer import CustomerStrategyBehaviour
+from simfleet.vehicle import VehicleStrategyBehaviour
 from simfleet.fleetmanager import FleetManagerStrategyBehaviour
-from simfleet.helpers import PathRequestException, distance_in_meters
+from simfleet.helpers import AlreadyInDestination, PathRequestException, distance_in_meters
 from simfleet.protocol import (
     REQUEST_PERFORMATIVE,
     ACCEPT_PERFORMATIVE,
@@ -28,6 +29,10 @@ from simfleet.utils import (
     TRANSPORT_CHARGED,
     CUSTOMER_WAITING,
     CUSTOMER_ASSIGNED,
+    STATE_SELECT_DESTINATION,
+    STATE_MOVEMENT_STEP,
+    STATE_UPDATE_CUSTOMER_INFO,
+    STATE_TD
 )
 
 
@@ -469,3 +474,67 @@ class AcceptFirstRequestBehaviour(CustomerStrategyBehaviour):
                         )
                     )
                     self.agent.status = CUSTOMER_WAITING
+
+
+################################################################
+#                                                              #
+#                        Vehicle Strategy                      #
+#                                                              #
+################################################################
+class VehicleFSM(FSMBehaviour):
+    async def on_start(self):
+        logger.info("-----------------vehicle fsm started-----------------")
+
+    async def on_end(self):
+        await self.agent.stop()
+    
+
+class SelectDestination( State):
+    async def on_start(self):
+        logger.info("-----------------selectDestination-----------------")
+
+    async def run(self):
+        if self.agent.get("destinations") != []:
+            self.set_next_state(STATE_MOVEMENT_STEP)
+        else: self.set_next_state(STATE_SELECT_DESTINATION)
+
+class MovementStep( State):
+    async def on_start(self):
+        logger.info("-----------------MovementStep-----------------")
+
+    async def run(self):
+        try:
+            await self.agent.move_to_next_destination()
+            self.set_next_state(STATE_MOVEMENT_STEP)
+        except AlreadyInDestination:
+            logger.success(
+                "Vehicle {} is already in destination".format(
+                    self.agent.name
+                )
+            )
+            self.agent.arrived_to_destination()
+            self.set_next_state(STATE_UPDATE_CUSTOMER_INFO)
+        except PathRequestException as e:
+            logger.error(
+                "Raising PathRequestException in pick_up_customer for {}".format(
+                    self.agent.name
+                )
+            )
+            self.set_next_state(STATE_UPDATE_CUSTOMER_INFO)
+            raise e
+
+class UpdateCustomerInfo( State):
+    async def on_start(self):
+        logger.info("-----------------UpdateCustomerInfo-----------------")
+        
+    async def run(self):
+        self.set_next_state(STATE_TD)
+
+class TD(State):
+    async def on_start(self):
+        logger.info("-----------------TD-----------------")
+        
+    async def run(self):
+        if self.agent.get("destinations") != []:
+            self.set_next_state(STATE_MOVEMENT_STEP)
+        else: self.set_next_state(STATE_SELECT_DESTINATION)
